@@ -1,0 +1,202 @@
+/* ============================================================================
+   AgriSense AI — Design Tokens
+   ----------------------------------------------------------------------------
+   Single source of truth for every raw value the design system consumes.
+   Tailwind (tailwind.config.ts) references these variables so components
+   never hard-code a color, radius, or duration. Change the palette or scale
+   once, here, and the entire product updates.
+
+   Color format: "H S% L%" (no hsl() wrapper) so Tailwind can apply alpha via
+   hsl(var(--x) / <alpha-value>).
+   ============================================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Brand: Primary Green (deep pine — canopy, trust, growth) ---- */
+  --color-primary-50: 150 45% 96%;
+  --color-primary-100: 150 42% 90%;
+  --color-primary-200: 150 40% 80%;
+  --color-primary-300: 151 40% 66%;
+  --color-primary-400: 151 42% 50%;
+  --color-primary-500: 152 48% 38%;   /* base */
+  --color-primary-600: 153 52% 28%;   /* brand anchor */
+  --color-primary-700: 154 55% 21%;
+  --color-primary-800: 155 55% 15%;
+  --color-primary-900: 156 55% 10%;
+
+  /* ---- Brand: Secondary Green (sage — soil, calm, secondary actions) ---- */
+  --color-secondary-50: 100 20% 95%;
+  --color-secondary-100: 100 18% 88%;
+  --color-secondary-300: 100 16% 68%;
+  --color-secondary-500: 100 15% 45%;
+  --color-secondary-600: 100 17% 36%;
+  --color-secondary-700: 100 18% 27%;
+
+  /* ---- Accent: Harvest Gold (ripeness, highlights, premium accents) ---- */
+  --color-accent-100: 42 70% 92%;
+  --color-accent-300: 42 68% 74%;
+  --color-accent-500: 42 65% 50%;
+  --color-accent-600: 40 70% 42%;
+  --color-accent-700: 38 72% 34%;
+
+  /* ---- Sky Blue (irrigation, weather, data-in-motion) ---- */
+  --color-sky-100: 200 70% 93%;
+  --color-sky-300: 200 68% 78%;
+  --color-sky-500: 200 65% 55%;
+  --color-sky-600: 201 68% 45%;
+  --color-sky-700: 202 70% 36%;
+
+  /* ---- Semantic ---- */
+  --color-success: 152 48% 38%;
+  --color-success-bg: 150 45% 95%;
+  --color-warning: 42 65% 50%;
+  --color-warning-bg: 42 70% 94%;
+  --color-danger: 4 72% 52%;
+  --color-danger-bg: 4 80% 96%;
+  --color-info: 200 65% 55%;
+  --color-info-bg: 200 70% 95%;
+
+  /* ---- Neutrals (green-tinted gray for cohesion with the palette) ---- */
+  --color-neutral-0: 0 0% 100%;
+  --color-neutral-50: 100 12% 98%;
+  --color-neutral-100: 110 10% 95%;
+  --color-neutral-200: 110 9% 90%;
+  --color-neutral-300: 110 8% 80%;
+  --color-neutral-400: 110 6% 62%;
+  --color-neutral-500: 110 5% 46%;
+  --color-neutral-600: 115 7% 34%;
+  --color-neutral-700: 120 9% 24%;
+  --color-neutral-800: 130 12% 15%;
+  --color-neutral-900: 140 15% 9%;
+  --color-neutral-950: 150 18% 5%;
+
+  /* ---- Surfaces ---- */
+  --color-background: 90 20% 98%;
+  --color-surface: 0 0% 100%;
+  --color-surface-raised: 0 0% 100%;
+  --color-border: 140 15% 88%;
+  --color-border-strong: 140 12% 78%;
+
+  /* ---- Text ---- */
+  --color-text-primary: 150 18% 12%;
+  --color-text-secondary: 120 8% 38%;
+  --color-text-muted: 110 6% 55%;
+  --color-text-on-brand: 0 0% 100%;
+
+  /* ---- Focus ring (leaf-green glow, not generic browser blue) ---- */
+  --color-ring: 151 55% 45%;
+
+  /* ---- Radius scale ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 9999px;
+
+  /* ---- Shadow system (soft, warm-neutral tint — no pure black) ---- */
+  --shadow-color: 150 30% 10%;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-md: 0 4px 10px hsl(var(--shadow-color) / 0.08), 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-lg: 0 12px 24px hsl(var(--shadow-color) / 0.10), 0 2px 6px hsl(var(--shadow-color) / 0.06);
+  --shadow-xl: 0 24px 48px hsl(var(--shadow-color) / 0.14), 0 4px 10px hsl(var(--shadow-color) / 0.08);
+  --shadow-glass: 0 8px 32px hsl(var(--shadow-color) / 0.10);
+
+  /* ---- Motion ---- */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --color-primary-50: 155 30% 10%;
+  --color-primary-100: 154 32% 14%;
+  --color-primary-200: 153 34% 20%;
+  --color-primary-300: 152 38% 30%;
+  --color-primary-400: 151 42% 42%;
+  --color-primary-500: 150 48% 52%;
+  --color-primary-600: 149 55% 62%;
+  --color-primary-700: 148 60% 72%;
+  --color-primary-800: 148 65% 84%;
+  --color-primary-900: 148 70% 92%;
+
+  --color-secondary-50: 100 10% 12%;
+  --color-secondary-100: 100 10% 18%;
+  --color-secondary-300: 100 10% 40%;
+  --color-secondary-500: 100 14% 62%;
+  --color-secondary-600: 100 16% 72%;
+  --color-secondary-700: 100 18% 82%;
+
+  --color-accent-100: 40 30% 14%;
+  --color-accent-300: 40 45% 30%;
+  --color-accent-500: 42 70% 58%;
+  --color-accent-600: 42 75% 68%;
+  --color-accent-700: 42 80% 78%;
+
+  --color-sky-100: 202 30% 14%;
+  --color-sky-300: 201 40% 28%;
+  --color-sky-500: 200 70% 62%;
+  --color-sky-600: 200 75% 72%;
+  --color-sky-700: 200 80% 82%;
+
+  --color-success: 150 48% 52%;
+  --color-success-bg: 152 30% 14%;
+  --color-warning: 42 70% 58%;
+  --color-warning-bg: 42 40% 16%;
+  --color-danger: 4 78% 62%;
+  --color-danger-bg: 4 45% 16%;
+  --color-info: 200 70% 62%;
+  --color-info-bg: 200 40% 15%;
+
+  --color-neutral-0: 150 18% 5%;
+  --color-neutral-50: 150 15% 8%;
+  --color-neutral-100: 140 12% 12%;
+  --color-neutral-200: 130 10% 18%;
+  --color-neutral-300: 120 8% 26%;
+  --color-neutral-400: 115 6% 38%;
+  --color-neutral-500: 110 5% 52%;
+  --color-neutral-600: 110 6% 66%;
+  --color-neutral-700: 105 8% 78%;
+  --color-neutral-800: 100 10% 88%;
+  --color-neutral-900: 90 12% 94%;
+  --color-neutral-950: 90 15% 98%;
+
+  --color-background: 160 22% 6%;
+  --color-surface: 160 18% 9%;
+  --color-surface-raised: 158 16% 12%;
+  --color-border: 160 12% 18%;
+  --color-border-strong: 160 12% 26%;
+
+  --color-text-primary: 100 15% 95%;
+  --color-text-secondary: 100 8% 74%;
+  --color-text-muted: 100 6% 55%;
+  --color-text-on-brand: 155 55% 10%;
+
+  --color-ring: 150 55% 55%;
+
+  --shadow-color: 160 60% 2%;
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
+  --shadow-md: 0 4px 10px hsl(var(--shadow-color) / 0.45), 0 1px 2px hsl(var(--shadow-color) / 0.3);
+  --shadow-lg: 0 12px 24px hsl(var(--shadow-color) / 0.5), 0 2px 6px hsl(var(--shadow-color) / 0.3);
+  --shadow-xl: 0 24px 48px hsl(var(--shadow-color) / 0.55), 0 4px 10px hsl(var(--shadow-color) / 0.35);
+  --shadow-glass: 0 8px 32px hsl(var(--shadow-color) / 0.5);
+}
+
+/* Respect reduced-motion preference across the whole design system */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  background-color: hsl(var(--color-background));
+  color: hsl(var(--color-text-primary));
+}
