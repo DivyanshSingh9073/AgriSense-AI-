@@ -1,18 +1,29 @@
 import type { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
-import { ROUTES, STORAGE_KEYS } from '@/constants';
+import { Navigate, useLocation } from 'react-router-dom';
+import { ROUTES } from '@/constants';
+import { useAuth } from '@/hooks';
+import { Spinner } from '@/components/ui';
 
 /**
- * Guards authenticated routes. This is a minimal placeholder for the setup
- * phase — it checks for a stored access token only. When the real auth
- * flow is built, replace the check with an AuthContext-driven `isAuthenticated`
- * (with a loading state) instead of reading localStorage directly.
+ * Guards authenticated routes using real session state from AuthContext
+ * (not a raw token check) so it correctly waits out the initial `/auth/me`
+ * hydration on page refresh instead of redirecting a valid session to
+ * /login for a flash of a frame.
  */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const hasToken = Boolean(localStorage.getItem(STORAGE_KEYS.accessToken));
+  const { isAuthenticated, isInitializing } = useAuth();
+  const location = useLocation();
 
-  if (!hasToken) {
-    return <Navigate to={ROUTES.auth.login} replace />;
+  if (isInitializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner size="lg" color="primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to={ROUTES.auth.login} replace state={{ from: location.pathname }} />;
   }
 
   return <>{children}</>;

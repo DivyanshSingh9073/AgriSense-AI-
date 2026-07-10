@@ -6,3 +6,6 @@ export * from './Badge';
 export * from './Avatar';
 export * from './Spinner';
 export * from './Alert';
+export * from './Tooltip';
+export * from './Dropdown';
+export * from './Skeleton';

@@ -7,11 +7,12 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
     'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 disabled:hover:bg-primary-600',
   secondary:
-    'bg-accent-500 text-primary-900 hover:bg-accent-600 active:bg-accent-700 disabled:hover:bg-accent-500',
+    'bg-secondary-500 text-white hover:bg-secondary-600 active:bg-secondary-700 disabled:hover:bg-secondary-500',
   outline:
     'border border-border bg-transparent text-foreground hover:bg-surface-muted',
   ghost: 'bg-transparent text-foreground hover:bg-surface-muted',
   danger: 'bg-danger text-white hover:opacity-90 active:opacity-80',
+  success: 'bg-success text-white hover:opacity-90 active:opacity-80',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -51,7 +52,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           'inline-flex items-center justify-center font-medium transition-colors duration-150',
           'disabled:opacity-50 disabled:cursor-not-allowed',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+          'focus-ring',
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],
           fullWidth && 'w-full',

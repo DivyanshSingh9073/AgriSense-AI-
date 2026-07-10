@@ -5,7 +5,7 @@ export interface AvatarProps {
   src?: string;
   /** Full name used to derive initials when there's no image (or it fails to load). */
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   status?: 'online' | 'offline' | 'away';
   className?: string;
 }
@@ -14,6 +14,7 @@ const SIZE_CLASSES = {
   sm: 'h-8 w-8 text-xs',
   md: 'h-10 w-10 text-sm',
   lg: 'h-14 w-14 text-lg',
+  xl: 'h-20 w-20 text-2xl',
 };
 
 const STATUS_CLASSES = {

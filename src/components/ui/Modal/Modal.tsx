@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MdClose } from 'react-icons/md';
@@ -23,6 +23,18 @@ const SIZE_CLASSES = {
  * Portal-rendered dialog with backdrop click-to-close, Escape-to-close, and
  * `role="dialog"` / `aria-modal` for screen readers. Body scroll is locked
  * while open.
+ *
+ * Composition: the built-in `title` prop renders the header (with close
+ * button) automatically. Use <ModalBody> / <ModalFooter> as children for
+ * consistent internal spacing — e.g.:
+ *
+ *   <Modal isOpen={isOpen} onClose={close} title="Delete field?">
+ *     <ModalBody>This can't be undone.</ModalBody>
+ *     <ModalFooter>
+ *       <Button variant="ghost" onClick={close}>Cancel</Button>
+ *       <Button variant="danger" onClick={confirm}>Delete</Button>
+ *     </ModalFooter>
+ *   </Modal>
  */
 export function Modal({ isOpen, onClose, title, children, size = 'md', className }: ModalProps) {
   useEffect(() => {
@@ -75,7 +87,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
                   type="button"
                   onClick={onClose}
                   aria-label="Close dialog"
-                  className="rounded-lg p-1.5 text-foreground-muted hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  className="rounded-lg p-1.5 text-foreground-muted hover:bg-surface-muted focus-ring"
                 >
                   <MdClose className="h-5 w-5" />
                 </button>
@@ -87,5 +99,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', className
       )}
     </AnimatePresence>,
     document.body,
+  );
+}
+
+/** Scrollable content region of a Modal. Use for the main message/form. */
+export function ModalBody({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('py-1 text-sm text-foreground-muted', className)} {...rest} />;
+}
+
+/** Right-aligned action row, separated from the body by a top border. */
+export function ModalFooter({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn('mt-6 flex items-center justify-end gap-3 border-t border-border pt-4', className)}
+      {...rest}
+    />
   );
 }

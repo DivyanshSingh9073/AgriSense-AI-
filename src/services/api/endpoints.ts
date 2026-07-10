@@ -9,6 +9,11 @@ export const API_ENDPOINTS = {
     register: '/auth/register',
     logout: '/auth/logout',
     me: '/auth/me',
+    refresh: '/auth/refresh',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
+    verifyEmail: '/auth/verify-email',
+    resendVerification: '/auth/resend-verification',
   },
   diseaseDetection: {
     analyze: '/disease-detection/analyze',

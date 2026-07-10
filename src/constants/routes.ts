@@ -7,10 +7,15 @@
  */
 export const ROUTES = {
   home: '/',
+  /** Internal, unlinked design-system gallery — not part of the product IA. */
+  showcase: '/showcase',
 
   auth: {
     login: '/login',
     register: '/register',
+    forgotPassword: '/forgot-password',
+    resetPassword: '/reset-password',
+    verifyEmail: '/verify-email',
   },
 
   dashboard: {
@@ -25,4 +30,6 @@ export const ROUTES = {
   },
 
   notFound: '*',
+  forbidden: '/403',
+  serverError: '/500',
 } as const;

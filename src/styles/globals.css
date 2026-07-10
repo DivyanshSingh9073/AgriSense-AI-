@@ -36,6 +36,30 @@
     --color-accent-800: 110 78 26;
     --color-accent-900: 74 52 17;
 
+    /* Secondary — fresh sprout green (distinct hue/saturation from primary) */
+    --color-secondary-50: 239 251 240;
+    --color-secondary-100: 215 243 218;
+    --color-secondary-200: 174 230 180;
+    --color-secondary-300: 127 212 137;
+    --color-secondary-400: 86 190 100;
+    --color-secondary-500: 63 163 76;
+    --color-secondary-600: 47 138 60;
+    --color-secondary-700: 37 110 48;
+    --color-secondary-800: 28 83 36;
+    --color-secondary-900: 19 58 25;
+
+    /* Neutral — true gray scale for chrome, borders, and dropdown/tooltip surfaces */
+    --color-neutral-50: 248 249 248;
+    --color-neutral-100: 238 240 238;
+    --color-neutral-200: 221 225 220;
+    --color-neutral-300: 194 199 192;
+    --color-neutral-400: 156 163 155;
+    --color-neutral-500: 117 125 116;
+    --color-neutral-600: 90 97 90;
+    --color-neutral-700: 68 73 68;
+    --color-neutral-800: 44 48 44;
+    --color-neutral-900: 26 29 26;
+
     /* Soil — umber neutral */
     --color-soil-50: 243 238 232;
     --color-soil-100: 227 213 197;
@@ -80,6 +104,33 @@
 
     --color-accent-500: 222 168 76;
     --color-accent-600: 228 181 89;
+
+    --color-secondary-50: 28 83 36;
+    --color-secondary-100: 37 110 48;
+    --color-secondary-200: 47 138 60;
+    --color-secondary-300: 63 163 76;
+    --color-secondary-400: 86 190 100;
+    --color-secondary-500: 127 212 137;
+    --color-secondary-600: 174 230 180;
+    --color-secondary-700: 215 243 218;
+    --color-secondary-800: 239 251 240;
+    --color-secondary-900: 245 253 246;
+
+    --color-neutral-50: 26 29 26;
+    --color-neutral-100: 44 48 44;
+    --color-neutral-200: 68 73 68;
+    --color-neutral-300: 90 97 90;
+    --color-neutral-400: 117 125 116;
+    --color-neutral-500: 156 163 155;
+    --color-neutral-600: 194 199 192;
+    --color-neutral-700: 221 225 220;
+    --color-neutral-800: 238 240 238;
+    --color-neutral-900: 248 249 248;
+
+    --color-success: 87 176 132;
+    --color-warning: 224 168 61;
+    --color-danger: 214 100 92;
+    --color-info: 118 160 214;
 
     --color-bg: 14 27 21;
     --color-surface: 22 38 30;
@@ -146,6 +197,14 @@
 
   .card-surface {
     @apply bg-surface border border-border rounded-2xl shadow-soft;
+  }
+
+  .glass-surface {
+    @apply border border-white/25 bg-white/10 backdrop-blur-xl dark:border-white/10 dark:bg-white/5;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
   }
 
   .text-gradient-primary {
