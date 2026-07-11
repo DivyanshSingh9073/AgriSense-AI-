@@ -30,7 +30,7 @@ function Base({ className, ...props }: SkeletonProps) {
   );
 }
 
-function SkeletonText({ lines = 1, className }: { lines?: number; className?: string }) {
+export function SkeletonText({ lines = 1, className }: { lines?: number; className?: string }) {
   return (
     <div className={cn("flex flex-col gap-2", className)} aria-hidden="true">
       {Array.from({ length: lines }).map((_, i) => (
@@ -43,7 +43,7 @@ function SkeletonText({ lines = 1, className }: { lines?: number; className?: st
   );
 }
 
-function SkeletonCircle({ size = 40, className }: { size?: number; className?: string }) {
+export function SkeletonCircle({ size = 40, className }: { size?: number; className?: string }) {
   return (
     <Base
       className={cn("rounded-full", className)}
@@ -53,7 +53,7 @@ function SkeletonCircle({ size = 40, className }: { size?: number; className?: s
   );
 }
 
-function SkeletonCard({ className }: { className?: string }) {
+export function SkeletonCard({ className }: { className?: string }) {
   return (
     <div className={cn("rounded-lg border border-border bg-surface p-6", className)} aria-hidden="true">
       <div className="mb-4 flex items-center gap-3">

@@ -23,13 +23,17 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   helperText?: string;
   prefixIcon?: ReactNode;
   suffixIcon?: ReactNode;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
-    { className, label, error, helperText, prefixIcon, suffixIcon, type = "text", id, disabled, ...props },
+    { className, label, error, helperText, prefixIcon, suffixIcon, leftIcon, rightIcon, type = "text", id, disabled, ...props },
     ref,
   ) => {
+    const resolvedPrefixIcon = prefixIcon ?? leftIcon;
+    const resolvedSuffixIcon = suffixIcon ?? rightIcon;
     const generatedId = useId();
     const inputId = id ?? generatedId;
     const helperId = `${inputId}-helper`;
@@ -53,9 +57,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
 
         <div className="relative flex items-center">
-          {prefixIcon && (
+          {resolvedPrefixIcon && (
             <span className="pointer-events-none absolute left-3 flex items-center text-text-muted" aria-hidden="true">
-              {prefixIcon}
+              {resolvedPrefixIcon}
             </span>
           )}
 
@@ -73,8 +77,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               "disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-text-muted",
               error ? "border-danger focus-visible:ring-danger" : "border-border-strong hover:border-primary-400",
-              prefixIcon ? "pl-9" : "pl-3",
-              suffixIcon || isPasswordField ? "pr-9" : "pr-3",
+              resolvedPrefixIcon ? "pl-9" : "pl-3",
+              resolvedSuffixIcon || isPasswordField ? "pr-9" : "pr-3",
               className,
             )}
             {...props}
@@ -91,9 +95,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               {showPassword ? <FiEyeOff className="h-4 w-4" /> : <FiEye className="h-4 w-4" />}
             </button>
           ) : (
-            suffixIcon && (
+            resolvedSuffixIcon && (
               <span className="pointer-events-none absolute right-3 flex items-center text-text-muted" aria-hidden="true">
-                {suffixIcon}
+                {resolvedSuffixIcon}
               </span>
             )
           )}

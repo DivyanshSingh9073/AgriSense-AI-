@@ -19,6 +19,7 @@ export type AlertType = "success" | "error" | "warning" | "info";
 
 export interface AlertProps {
   type?: AlertType;
+  variant?: AlertType;
   title?: string;
   children?: ReactNode;
   onClose?: () => void;
@@ -32,8 +33,9 @@ const config: Record<AlertType, { icon: ReactNode; classes: string; iconColor: s
   info: { icon: <FiInfo />, classes: "bg-info-bg border-info/30", iconColor: "text-info" },
 };
 
-export function Alert({ type = "info", title, children, onClose, className }: AlertProps) {
-  const { icon, classes, iconColor } = config[type];
+export function Alert({ type = "info", variant, title, children, onClose, className }: AlertProps) {
+  const resolvedType = variant ?? type;
+  const { icon, classes, iconColor } = config[resolvedType];
 
   return (
     <div

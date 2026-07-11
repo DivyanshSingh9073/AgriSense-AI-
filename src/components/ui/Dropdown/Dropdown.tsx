@@ -25,7 +25,7 @@ export type DropdownEntry = DropdownItem | { divider: true };
 
 export interface DropdownProps {
   /** Trigger element — typically a Button or icon button. Receives no injected props. */
-  trigger: ReactElement;
+  trigger: ReactElement<any, any>;
   items: DropdownEntry[];
   align?: 'left' | 'right';
   className?: string;
