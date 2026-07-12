@@ -20,6 +20,7 @@ export const ROUTES = {
 
   dashboard: {
     root: '/dashboard',
+    farmManagement: '/dashboard/farm-management',
     diseaseDetection: '/dashboard/disease-detection',
     cropRecommendation: '/dashboard/crop-recommendation',
     weather: '/dashboard/weather',

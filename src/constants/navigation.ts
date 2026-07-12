@@ -1,5 +1,6 @@
 import {
   MdSpaceDashboard,
+  MdOutlineAgriculture,
   MdOutlineBugReport,
   MdOutlineEco,
   MdOutlineWbSunny,
@@ -26,6 +27,12 @@ export const DASHBOARD_NAV: NavItem[] = [
     path: ROUTES.dashboard.root,
     icon: MdSpaceDashboard,
     description: 'Farm health at a glance',
+  },
+  {
+    label: 'Farm Management',
+    path: ROUTES.dashboard.farmManagement,
+    icon: MdOutlineAgriculture,
+    description: 'Manage your farms and fields',
   },
   {
     label: 'Disease Detection',

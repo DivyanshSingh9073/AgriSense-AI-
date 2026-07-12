@@ -37,6 +37,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       disabled,
       className,
       children,
+      loadingText,
       ...rest
     },
     ref,
@@ -61,11 +62,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...rest}
       >
         {isLoading ? (
-          <Spinner size="sm" className="shrink-0" />
+          <>
+            <Spinner size="sm" className="shrink-0" />
+            <span>{loadingText ?? children}</span>
+          </>
         ) : (
           leftIcon && <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{leftIcon}</span>
         )}
-        {children}
+        {!isLoading && children}
         {!isLoading && rightIcon && (
           <span className="shrink-0 [&>svg]:h-4 [&>svg]:w-4">{rightIcon}</span>
         )}

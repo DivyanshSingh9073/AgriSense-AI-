@@ -24,7 +24,7 @@ import { useAuth } from '@/hooks';
 import { farmService } from '@/services/farm.service';
 import type { Farm } from '@/types';
 import type { FarmFormValues } from '@/utils/validation';
-import { FarmFormModal } from './FarmFormModal';
+import { FarmForm } from '@/components/farm/FarmForm';
 
 /** User's personal profile and farm details. */
 export function Profile() {
@@ -248,7 +248,7 @@ export function Profile() {
         )}
       </div>
 
-      <FarmFormModal
+      <FarmForm
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         farm={editingFarm}

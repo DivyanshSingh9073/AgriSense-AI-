@@ -9,6 +9,7 @@ import { Weather } from '@/pages/weather';
 import { AIChat } from '@/pages/ai-chat';
 import { Reports } from '@/pages/reports';
 import { Profile } from '@/pages/profile';
+import { FarmManagement } from '@/pages/farm-management';
 import { Settings } from '@/pages/settings';
 import { NotFound } from '@/pages/not-found';
 import { Forbidden } from '@/pages/forbidden';
@@ -52,6 +53,7 @@ export function AppRoutes() {
         <Route path={ROUTES.dashboard.weather} element={<Weather />} />
         <Route path={ROUTES.dashboard.aiChat} element={<AIChat />} />
         <Route path={ROUTES.dashboard.reports} element={<Reports />} />
+        <Route path={ROUTES.dashboard.farmManagement} element={<FarmManagement />} />
         <Route path={ROUTES.dashboard.profile} element={<Profile />} />
         <Route path={ROUTES.dashboard.settings} element={<Settings />} />
       </Route>
