@@ -34,4 +34,12 @@ export const API_ENDPOINTS = {
     list: '/reports',
     generate: '/reports/generate',
   },
+  farms: {
+    list: '/farms',
+    create: '/farms',
+    detail: (farmId: number | string) => `/farms/${farmId}`,
+  },
+  users: {
+    profile: '/users/profile',
+  },
 } as const;
