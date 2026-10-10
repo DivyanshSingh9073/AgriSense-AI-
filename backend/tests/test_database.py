@@ -26,7 +26,11 @@ def test_engine_is_reused_and_connection_probe_runs_select_one(monkeypatch: pyte
     engine.dispose()
 
 
-def test_database_session_dependency_closes_session(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("fail_during_request", [False, True])
+def test_database_session_dependency_closes_session(
+    monkeypatch: pytest.MonkeyPatch,
+    fail_during_request: bool,
+) -> None:
     session = MagicMock()
     session_factory = MagicMock(return_value=session)
     monkeypatch.setattr(database, "SessionLocal", session_factory)
@@ -34,7 +38,11 @@ def test_database_session_dependency_closes_session(monkeypatch: pytest.MonkeyPa
 
     dependency = database.get_db_session()
     assert next(dependency) is session
-    dependency.close()
+    if fail_during_request:
+        with pytest.raises(RuntimeError, match="request failed"):
+            dependency.throw(RuntimeError("request failed"))
+    else:
+        dependency.close()
 
     session.close.assert_called_once_with()
 

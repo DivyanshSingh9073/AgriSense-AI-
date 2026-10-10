@@ -12,7 +12,7 @@ npm run dev
 
 Set `VITE_API_BASE_URL` in `.env` to the backend API root. The example value is `http://localhost:5000/api/v1`. `VITE_APP_ENV` accepts `development`, `staging`, or `production`.
 
-The repository includes a FastAPI backend foundation with health checks, SQLAlchemy models, and Alembic migrations. Its local API base URL is `http://localhost:5000/api/v1`, matching the frontend example. Feature API routes are not implemented yet.
+The repository includes a FastAPI backend with health checks, SQLAlchemy models, Alembic migrations, and the initial authentication endpoints. Its local API base URL is `http://localhost:5000/api/v1`, matching the frontend example. Farm CRUD, password reset/email delivery, and AI feature APIs are not implemented yet.
 
 ## Run the backend
 
@@ -29,6 +29,19 @@ uvicorn app.main:app --host 127.0.0.1 --port 5000
 
 The health endpoint is `http://localhost:5000/api/v1/health`. Keep the frontend's `VITE_API_BASE_URL` set to `http://localhost:5000/api/v1`. Set `CORS_ORIGINS` to a comma-separated list of specific trusted origins; the development default is `http://localhost:5173`, and wildcard origins are rejected. In production, explicitly configure the frontend's deployed origin.
 
+### Configure authentication
+
+Set `JWT_SECRET_KEY` in `backend/.env` to a unique, randomly generated secret. For example, generate one locally with `python -c "import secrets; print(secrets.token_urlsafe(48))"`; do not commit the generated value. Production startup rejects missing, placeholder, short, or low-diversity keys; use a random key of at least 32 bytes. Access tokens expire after 15 minutes and refresh tokens after 7 days by default; configure `ACCESS_TOKEN_EXPIRE_MINUTES` and `REFRESH_TOKEN_EXPIRE_DAYS` as needed.
+
+Authentication endpoints match the frontend's current contract:
+
+- `POST /api/v1/auth/register` accepts `{name,email,password}` and returns `{success,message,data:{user,tokens:{accessToken,refreshToken}}}`.
+- `POST /api/v1/auth/login` accepts `{email,password}` and returns the same response shape.
+- `GET /api/v1/auth/me` requires `Authorization: Bearer <accessToken>` and returns `{success,message,data:<user>}`.
+- `POST /api/v1/auth/refresh` accepts `{refreshToken}` and returns `{success,message,data:{accessToken,refreshToken}}` for the existing Axios interceptor.
+
+Passwords are stored as Argon2 hashes. Authenticated profile responses never include password hashes. Refresh-token JTIs are stored in PostgreSQL and each refresh atomically consumes the previous token; multiple logins have independent refresh sessions. Configure and apply the current Alembic migrations before using authentication. After upgrading from the earlier stateless refresh implementation, users must sign in once to establish persisted refresh-token sessions. Email verification delivery, logout/revocation, password reset, and farm/AI endpoints remain separate work.
+
 ### Configure local PostgreSQL
 
 Install and start PostgreSQL, then create a local database (for example, `createdb agrisense_ai`). Edit `backend/.env` and set `DATABASE_URL` to your own local connection string; URL-encode special characters in the password:
@@ -41,7 +54,7 @@ The checked-in `backend/.env.example` contains only a replaceable placeholder, n
 
 `GET /api/v1/health` only checks that the API process responds. `GET /api/v1/health/ready` checks database connectivity and returns HTTP 503 if `DATABASE_URL` is missing or PostgreSQL is unavailable. Neither endpoint returns connection credentials or driver errors.
 
-Run the backend test suite from `backend/` with `python -m pytest` after activating the virtual environment. Database tests use SQLite or mocks and do not require a running PostgreSQL service. Authentication and AI features are not implemented.
+Run the backend test suite from `backend/` with `python -m pytest` after activating the virtual environment. Database and authentication tests use isolated SQLite and do not require a running PostgreSQL service; run `alembic upgrade head` against a configured local PostgreSQL database to create its schema.
 
 ## Features
 
@@ -75,54 +88,3 @@ npm run lint
 ```
 
 The component showcase is available at `/showcase` in development builds only.
-# AgriSense AI — Precision Agriculture Platform
-
-Foundation scaffold: React 19 + TypeScript + Vite + Tailwind CSS + React Router DOM + Framer Motion + React Hook Form + Zod + Recharts + Axios.
-
-The frontend setup includes routing, layouts, a reusable UI kit, theming, and feature pages. Backend feature APIs are not implemented yet.
-
-## Getting started
-
-```bash
-npm install
-cp .env.example .env
-npm run dev
-```
-
-## Folder structure
-
-```
-src/
-├── assets/            Static images/icons imported by components
-├── components/
-│   ├── ui/             Design-system primitives (Button, Card, Input, Modal, Badge, Avatar, Spinner, Alert)
-│   ├── layout/          Structural chrome shared by layouts (Navbar, Sidebar, Topbar, Footer)
-│   └── common/           Small cross-page helpers (e.g. PageContainer scaffold)
-├── layouts/            Route-level shells: MainLayout, AuthLayout, DashboardLayout
-├── pages/              One folder per route, each exporting a single page component
-├── routes/             AppRoutes tree + ProtectedRoute guard
-├── constants/           ROUTES, COLORS, navigation config, APP_CONFIG — no magic strings
-├── services/api/         Axios instance + endpoint path constants
-├── context/             React Context providers (ThemeContext)
-├── hooks/               Custom hooks (useTheme, more to come)
-├── types/               Shared TypeScript types
-├── utils/               Small pure helpers (cn = clsx + tailwind-merge)
-└── styles/globals.css    Tailwind layers, CSS variable theme tokens, base + utility classes
-```
-
-See the full explanation of *why* each folder exists in the setup conversation / project docs.
-
-## Design tokens
-
-Colors, type scale, and radii are defined once as CSS variables in `src/styles/globals.css`
-and mapped into Tailwind in `tailwind.config.ts`. Dark mode is class-based (`.dark` on `<html>`),
-toggled by `ThemeContext` / `useTheme()`, and persisted to `localStorage`.
-
-Chart-safe hex values (for Recharts, which can't read Tailwind classes) live in
-`src/constants/colors.ts` and are kept in sync with the CSS variables by convention.
-
-## Routing
-
-All paths are centralized in `src/constants/routes.ts` (`ROUTES`). `src/routes/AppRoutes.tsx`
-nests three layout branches — public, auth, and the protected dashboard — so each layout
-mounts once per branch rather than once per page.
