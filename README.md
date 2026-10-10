@@ -12,7 +12,7 @@ npm run dev
 
 Set `VITE_API_BASE_URL` in `.env` to the backend API root. The example value is `http://localhost:5000/api/v1`. `VITE_APP_ENV` accepts `development`, `staging`, or `production`.
 
-The repository includes a FastAPI backend with health checks, SQLAlchemy models, Alembic migrations, and the initial authentication endpoints. Its local API base URL is `http://localhost:5000/api/v1`, matching the frontend example. Farm CRUD, password reset/email delivery, and AI feature APIs are not implemented yet.
+The repository includes a FastAPI backend with health checks, SQLAlchemy models, Alembic migrations, authentication, and owner-scoped Farm CRUD. Its local API base URL is `http://localhost:5000/api/v1`, matching the frontend example. Password reset/email delivery and AI feature APIs are not implemented yet.
 
 ## Run the backend
 
@@ -40,7 +40,17 @@ Authentication endpoints match the frontend's current contract:
 - `GET /api/v1/auth/me` requires `Authorization: Bearer <accessToken>` and returns `{success,message,data:<user>}`.
 - `POST /api/v1/auth/refresh` accepts `{refreshToken}` and returns `{success,message,data:{accessToken,refreshToken}}` for the existing Axios interceptor.
 
-Passwords are stored as Argon2 hashes. Authenticated profile responses never include password hashes. Refresh-token JTIs are stored in PostgreSQL and each refresh atomically consumes the previous token; multiple logins have independent refresh sessions. Configure and apply the current Alembic migrations before using authentication. After upgrading from the earlier stateless refresh implementation, users must sign in once to establish persisted refresh-token sessions. Email verification delivery, logout/revocation, password reset, and farm/AI endpoints remain separate work.
+Passwords are stored as Argon2 hashes. Authenticated profile responses never include password hashes. Refresh-token JTIs are stored in PostgreSQL and each refresh atomically consumes the previous token; multiple logins have independent refresh sessions. Configure and apply the current Alembic migrations before using authentication. After upgrading from the earlier stateless refresh implementation, users must sign in once to establish persisted refresh-token sessions. Email verification delivery, logout/revocation, and password reset remain separate work.
+
+### Farm API
+
+All Farm endpoints require `Authorization: Bearer <accessToken>`. They return direct farm resources (not the auth response envelope). The authenticated user owns the record; client-supplied `user_id` is rejected.
+
+- `POST /api/v1/farms` accepts required `farm_name` and `location`, with optional `soil_type`, positive `farm_size` (at most 2 decimal places), and `water_source`; it returns `201` and the created farm.
+- `GET /api/v1/farms` returns only the authenticated user's farms as a JSON array.
+- `GET /api/v1/farms/{farm_id}` returns an owned farm; missing and other users' farms both return `404`.
+- `PATCH /api/v1/farms/{farm_id}` applies only supplied fields. The existing frontend currently sends `PUT`, so `PUT /api/v1/farms/{farm_id}` is retained as a compatibility alias with the same partial-update behavior.
+- `DELETE /api/v1/farms/{farm_id}` returns `204` on success. Farm names and locations are required; optional soil/water values may be cleared with `null`.
 
 ### Configure local PostgreSQL
 
@@ -72,7 +82,7 @@ The screens call the API and display request failures; they do not generate subs
 | Feature | Method and path |
 | --- | --- |
 | Authentication | `POST /auth/login`, `/auth/register`, `/auth/logout`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/verify-email`, `/auth/resend-verification`; `GET /auth/me` |
-| Farms | `GET /farms`, `POST /farms`, `PUT /farms/{farmId}`, `DELETE /farms/{farmId}` |
+| Farms | `GET /farms`, `POST /farms`, `GET /farms/{farmId}`, `PATCH /farms/{farmId}`, `PUT /farms/{farmId}` (frontend compatibility alias), `DELETE /farms/{farmId}` |
 | Disease detection | `POST /disease-detection/analyze` (multipart image); `/disease-detection/history` is declared but not currently used |
 | Crop recommendation | `POST /crop-recommendation/recommend` |
 | Weather | `GET /weather/current`, `GET /weather/forecast` |

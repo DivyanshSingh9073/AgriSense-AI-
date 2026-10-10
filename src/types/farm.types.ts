@@ -4,7 +4,7 @@
  */
 export interface Farm {
   id: number;
-  user_id: number;
+  user_id: string;
   farm_name: string;
   location: string;
   soil_type?: string | null;
