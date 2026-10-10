@@ -2,6 +2,7 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { APP_CONFIG, STORAGE_KEYS } from '@/constants';
 import type { ApiError, AuthTokens } from '@/types';
 import { API_ENDPOINTS } from './endpoints';
+import { normalizeApiErrorPayload } from './normalizeApiError';
 
 /**
  * Single axios instance used by every service/hook in the app.
@@ -85,7 +86,7 @@ async function refreshAccessToken(): Promise<string> {
 // silent token refresh and replay the original request before giving up.
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
+  async (error: AxiosError<unknown>) => {
     const status = error.response?.status ?? 0;
     const originalRequest = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
 
@@ -107,8 +108,7 @@ api.interceptors.response.use(
 
     const normalized: ApiError = {
       status,
-      message: error.response?.data?.message ?? error.message ?? 'Unexpected network error',
-      details: error.response?.data?.errors,
+      ...normalizeApiErrorPayload(error.response?.data, error.message ?? 'Unexpected network error'),
     };
 
     return Promise.reject(normalized);
