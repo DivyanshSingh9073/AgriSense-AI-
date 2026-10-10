@@ -1,8 +1,6 @@
 /**
- * Shapes exchanged with the FastAPI auth endpoints. Adjust field names here
- * if the backend's actual response shape differs — every auth page and the
- * AuthContext consume these types exclusively, so one edit here propagates
- * everywhere.
+ * Frontend auth request and response shapes. Confirm these against the
+ * configured backend before relying on an integration.
  */
 export interface User {
   id: string;

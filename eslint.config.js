@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from '@typescript-eslint/eslint-plugin';
@@ -12,7 +13,7 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       parser: tsParser,
-      globals: { window: 'readonly', document: 'readonly' },
+      globals: globals.browser,
     },
     plugins: {
       '@typescript-eslint': tseslint,
@@ -22,6 +23,7 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      'no-unused-vars': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

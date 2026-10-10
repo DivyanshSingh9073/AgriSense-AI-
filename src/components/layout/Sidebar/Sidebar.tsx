@@ -6,14 +6,16 @@ import { cn } from '@/utils';
 export interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobile?: boolean;
 }
 
 /** Collapsible primary navigation for the authenticated dashboard shell. */
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, mobile = false }: SidebarProps) {
   return (
     <aside
       className={cn(
-        'hidden shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 md:flex',
+        'shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200',
+        mobile ? 'flex w-full' : 'hidden md:flex',
         collapsed ? 'w-[76px]' : 'w-64',
       )}
       aria-label="Sidebar"

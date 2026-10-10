@@ -19,6 +19,7 @@ export function VerifyEmail() {
 
   const [status, setStatus] = useState<Status>(token ? 'verifying' : 'awaiting');
   const [error, setError] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
@@ -35,9 +36,13 @@ export function VerifyEmail() {
 
   const handleResend = async () => {
     setIsResending(true);
+    setResendError(null);
     try {
       await resendVerification();
       setResent(true);
+    } catch (requestError) {
+      const message = requestError && typeof requestError === 'object' && 'message' in requestError ? String(requestError.message) : null;
+      setResendError(message ?? 'Could not resend the verification email. Please try again.');
     } finally {
       setIsResending(false);
     }
@@ -75,6 +80,7 @@ export function VerifyEmail() {
         <Alert variant="error" className="mt-5">
           {error}
         </Alert>
+        {resendError && <Alert variant="error" className="mt-3">{resendError}</Alert>}
         <Button fullWidth className="mt-6" isLoading={isResending} onClick={handleResend}>
           Resend verification email
         </Button>
@@ -96,6 +102,8 @@ export function VerifyEmail() {
           Verification email resent — check your inbox.
         </Alert>
       )}
+
+      {resendError && <Alert variant="error" className="mt-5 text-left">{resendError}</Alert>}
 
       <Button variant="outline" fullWidth className="mt-6" isLoading={isResending} onClick={handleResend}>
         Resend email

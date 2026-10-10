@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "../../lib/cn";
 
@@ -56,7 +56,7 @@ export function Dropdown({ trigger, items, align = "left" }: DropdownProps) {
     if (open && activeIndex >= 0) itemRefs.current[activeIndex]?.focus();
   }, [open, activeIndex]);
 
-  function handleTriggerKeyDown(e: React.KeyboardEvent) {
+  function handleTriggerKeyDown(e: ReactKeyboardEvent) {
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setOpen(true);
@@ -64,7 +64,7 @@ export function Dropdown({ trigger, items, align = "left" }: DropdownProps) {
     }
   }
 
-  function handleMenuKeyDown(e: React.KeyboardEvent) {
+  function handleMenuKeyDown(e: ReactKeyboardEvent) {
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();

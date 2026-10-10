@@ -123,11 +123,14 @@ export function Settings() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    let logoutWarning = false;
     try {
       await logout();
-      navigate(ROUTES.auth.login, { replace: true });
+    } catch {
+      logoutWarning = true;
     } finally {
       setIsLoggingOut(false);
+      navigate(ROUTES.auth.login, { replace: true, state: { logoutWarning } });
     }
   };
 

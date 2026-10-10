@@ -32,31 +32,28 @@ export function Profile() {
 
   const [farms, setFarms] = useState<Farm[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDemoData, setIsDemoData] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const loadFarms = async () => {
-    setIsLoading(true);
-    setLoadError(null);
-    try {
-      const result = await farmService.list();
-      setFarms(result);
-      setIsDemoData(farmService.isDemoMode());
-    } catch {
-      setLoadError('Could not load your farms right now. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadFarms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    async function loadFarms() {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        setFarms(await farmService.list());
+      } catch {
+        setLoadError('Could not load your farms right now. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    void loadFarms();
+  }, [reloadKey]);
 
   const openAddModal = () => {
     setEditingFarm(null);
@@ -69,6 +66,7 @@ export function Profile() {
   };
 
   const handleSubmit = async (values: FarmFormValues) => {
+    setMutationError(null);
     const payload = {
       farm_name: values.farm_name,
       location: values.location,
@@ -77,15 +75,18 @@ export function Profile() {
       water_source: values.water_source || undefined,
     };
 
-    if (editingFarm) {
-      const updated = await farmService.update(editingFarm.id, payload);
-      setFarms((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-    } else {
-      const created = await farmService.create(payload);
-      setFarms((prev) => [created, ...prev]);
+    try {
+      if (editingFarm) {
+        const updated = await farmService.update(editingFarm.id, payload);
+        setFarms((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+      } else {
+        const created = await farmService.create(payload);
+        setFarms((prev) => [created, ...prev]);
+      }
+      setModalOpen(false);
+    } catch {
+      setMutationError('Could not save this farm. Check the backend connection and try again.');
     }
-    setIsDemoData(farmService.isDemoMode());
-    setModalOpen(false);
   };
 
   const handleDelete = async (farm: Farm) => {
@@ -93,6 +94,9 @@ export function Profile() {
     try {
       await farmService.remove(farm.id);
       setFarms((prev) => prev.filter((f) => f.id !== farm.id));
+      setMutationError(null);
+    } catch {
+      setMutationError('Could not delete this farm. Check the backend connection and try again.');
     } finally {
       setDeletingId(null);
     }
@@ -150,16 +154,15 @@ export function Profile() {
         </Button>
       </div>
 
-      {isDemoData && (
-        <Alert variant="info" className="mt-4">
-          Showing locally saved demo farms — the live farm service wasn't reachable, so changes here are
-          stored in this browser only.
-        </Alert>
-      )}
-
       {loadError && (
         <Alert variant="error" className="mt-4" onClose={() => setLoadError(null)}>
           {loadError}
+        </Alert>
+      )}
+
+      {mutationError && !modalOpen && (
+        <Alert variant="error" className="mt-4" onClose={() => setMutationError(null)}>
+          {mutationError}
         </Alert>
       )}
 
@@ -169,6 +172,13 @@ export function Profile() {
             <SkeletonCard />
             <SkeletonCard />
           </>
+        ) : loadError ? (
+          <Card className="sm:col-span-2">
+            <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-sm text-foreground-muted">Farm records are unavailable until the server responds.</p>
+              <Button size="sm" variant="outline" onClick={() => setReloadKey((key) => key + 1)}>Try again</Button>
+            </CardBody>
+          </Card>
         ) : farms.length === 0 ? (
           <Card className="sm:col-span-2">
             <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
@@ -253,6 +263,7 @@ export function Profile() {
         onClose={() => setModalOpen(false)}
         farm={editingFarm}
         onSubmit={handleSubmit}
+        submitError={mutationError}
       />
     </div>
   );

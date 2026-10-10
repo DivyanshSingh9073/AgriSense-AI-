@@ -7,7 +7,11 @@ const HISTORY_STORAGE_KEY = 'agrisense.reportHistory';
 function readHistory(): ReportListItem[] {
   try {
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as ReportListItem[]) : [];
+    if (!raw) return [];
+    const entries = JSON.parse(raw) as ReportListItem[];
+    return entries
+      .filter((entry) => !entry.summary.includes('locally generated placeholder summary'))
+      .map((entry) => ({ ...entry, isLocal: true }));
   } catch {
     return [];
   }
@@ -24,33 +28,20 @@ function saveToHistory(entry: ReportListItem): void {
 
 export const reportsService = {
   /**
-   * `GET /reports` currently returns an empty placeholder list on the live
-   * backend. We merge it with reports generated locally in this browser so
-   * the page still shows a meaningful history.
+  * Merge server reports with successful reports cached in this browser.
    */
   async list(): Promise<ReportListItem[]> {
-    let remote: ReportListItem[] = [];
-    try {
-      const { data } = await api.get<{ reports?: ReportListItem[] }>(API_ENDPOINTS.reports.list);
-      remote = Array.isArray(data?.reports) ? data.reports : [];
-    } catch {
-      remote = [];
-    }
+    const { data } = await api.get<{ reports?: ReportListItem[] }>(API_ENDPOINTS.reports.list);
+    const remote = Array.isArray(data?.reports) ? data.reports : [];
     return [...remote, ...readHistory()];
   },
 
   async generate(payload: GenerateReportPayload, farmName?: string): Promise<ReportListItem> {
-    let summary = '';
-    try {
-      const { data } = await api.post<{ report: GeneratedReport }>(
-        API_ENDPOINTS.reports.generate,
-        payload,
-      );
-      summary = data.report.summary;
-    } catch {
-      summary =
-        'Unable to reach the report engine right now, so this is a locally generated placeholder summary. Conditions look generally stable — keep monitoring soil moisture and watch for early disease symptoms.';
-    }
+    const { data } = await api.post<{ report: GeneratedReport }>(
+      API_ENDPOINTS.reports.generate,
+      payload,
+    );
+    const summary = data.report.summary;
 
     const entry: ReportListItem = {
       id: crypto.randomUUID(),
@@ -59,6 +50,7 @@ export const reportsService = {
       reportType: payload.report_type,
       summary,
       createdAt: new Date().toISOString(),
+      isLocal: true,
     };
     saveToHistory(entry);
     return entry;

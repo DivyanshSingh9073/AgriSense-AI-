@@ -1,8 +1,6 @@
 /**
- * Shapes exchanged with the FastAPI `/farms` endpoints. Field names are
- * snake_case to match the backend's `FarmResponse` schema exactly (unlike
- * the `/auth` routes, farm routes return the resource directly — no
- * `ApiResponse<T>` envelope).
+ * Frontend farm request and response shapes. The current service expects
+ * snake_case fields and direct resources; confirm these against the backend.
  */
 export interface Farm {
   id: number;

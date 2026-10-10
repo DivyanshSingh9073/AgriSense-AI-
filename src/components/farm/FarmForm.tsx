@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MdOutlineAgriculture, MdOutlinePlace, MdOutlineWater, MdOutlineLandscape } from 'react-icons/md';
 import { Button, Input, Modal, ModalBody, ModalFooter } from '@/components/ui';
+import { Alert } from '@/components/ui';
 import { farmSchema, type FarmFormValues } from '@/utils/validation';
 import type { Farm } from '@/types';
 
@@ -11,6 +12,7 @@ interface FarmFormProps {
   onClose: () => void;
   farm?: Farm | null;
   onSubmit: (values: FarmFormValues) => Promise<void> | void;
+  submitError?: string | null;
 }
 
 const emptyValues: FarmFormValues = {
@@ -21,7 +23,7 @@ const emptyValues: FarmFormValues = {
   water_source: '',
 };
 
-export function FarmForm({ isOpen, onClose, farm, onSubmit }: FarmFormProps) {
+export function FarmForm({ isOpen, onClose, farm, onSubmit, submitError }: FarmFormProps) {
   const {
     register,
     handleSubmit,
@@ -55,6 +57,7 @@ export function FarmForm({ isOpen, onClose, farm, onSubmit }: FarmFormProps) {
     <Modal isOpen={isOpen} onClose={onClose} title={farm ? 'Edit farm' : 'Add a farm'} size="md">
       <form onSubmit={handleSubmit(handleFormSubmit)} noValidate>
         <ModalBody>
+          {submitError && <Alert variant="error" className="mb-4">{submitError}</Alert>}
           <div className="space-y-4">
             <Input
               label="Farm name"

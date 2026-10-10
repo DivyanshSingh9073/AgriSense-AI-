@@ -14,6 +14,7 @@ export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
+  const logoutWarning = (location.state as { logoutWarning?: boolean } | null)?.logoutWarning;
 
   const {
     register,
@@ -41,6 +42,12 @@ export function Login() {
     <div>
       <h1 className="font-display text-2xl font-semibold">Welcome back</h1>
       <p className="mt-1.5 text-sm text-foreground-muted">Sign in to continue to your dashboard.</p>
+
+      {logoutWarning && (
+        <Alert variant="warning" className="mt-5">
+          You were signed out on this device, but the server could not confirm the logout request.
+        </Alert>
+      )}
 
       {formError && (
         <Alert variant="error" className="mt-5" onClose={() => setFormError(null)}>

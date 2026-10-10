@@ -27,9 +27,7 @@ import { farmService } from '@/services/farm.service';
 import type { Farm } from '@/types';
 import type { FarmFormValues } from '@/utils/validation';
 
-const FILTER_OPTIONS = ['all', 'loamy', 'clay', 'sandy', 'other'] as const;
-
-type SoilFilter = (typeof FILTER_OPTIONS)[number];
+type SoilFilter = 'all' | 'loamy' | 'clay' | 'sandy' | 'other';
 
 function normalizeSoilType(value?: string | null): string {
   if (!value) return 'other';
@@ -42,7 +40,7 @@ export function FarmManagement() {
   const [soilFilter, setSoilFilter] = useState<SoilFilter>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isDemoData, setIsDemoData] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -53,7 +51,6 @@ export function FarmManagement() {
     try {
       const result = await farmService.list();
       setFarms(result);
-      setIsDemoData(farmService.isDemoMode());
     } catch {
       setLoadError('Could not load your farms right now. Please try again.');
     } finally {
@@ -95,6 +92,7 @@ export function FarmManagement() {
   };
 
   const handleSubmit = async (values: FarmFormValues) => {
+    setMutationError(null);
     const payload = {
       farm_name: values.farm_name,
       location: values.location,
@@ -103,16 +101,18 @@ export function FarmManagement() {
       water_source: values.water_source || undefined,
     };
 
-    if (editingFarm) {
-      const updated = await farmService.update(editingFarm.id, payload);
-      setFarms((prev) => prev.map((farm) => (farm.id === updated.id ? updated : farm)));
-    } else {
-      const created = await farmService.create(payload);
-      setFarms((prev) => [created, ...prev]);
+    try {
+      if (editingFarm) {
+        const updated = await farmService.update(editingFarm.id, payload);
+        setFarms((prev) => prev.map((farm) => (farm.id === updated.id ? updated : farm)));
+      } else {
+        const created = await farmService.create(payload);
+        setFarms((prev) => [created, ...prev]);
+      }
+      setIsModalOpen(false);
+    } catch {
+      setMutationError('Could not save this farm. Check the backend connection and try again.');
     }
-
-    setIsDemoData(farmService.isDemoMode());
-    setIsModalOpen(false);
   };
 
   const handleDelete = async (farm: Farm) => {
@@ -120,6 +120,9 @@ export function FarmManagement() {
     try {
       await farmService.remove(farm.id);
       setFarms((prev) => prev.filter((item) => item.id !== farm.id));
+      setMutationError(null);
+    } catch {
+      setMutationError('Could not delete this farm. Check the backend connection and try again.');
     } finally {
       setDeletingId(null);
     }
@@ -139,15 +142,15 @@ export function FarmManagement() {
         </Button>
       </div>
 
-      {isDemoData && (
-        <Alert variant="info" className="mt-6">
-          Showing locally saved demo farms — the live farm service was unavailable, so changes are stored in this browser only.
-        </Alert>
-      )}
-
       {loadError && (
         <Alert variant="error" className="mt-6" onClose={() => setLoadError(null)}>
           {loadError}
+        </Alert>
+      )}
+
+      {mutationError && !isModalOpen && (
+        <Alert variant="error" className="mt-6" onClose={() => setMutationError(null)}>
+          {mutationError}
         </Alert>
       )}
 
@@ -198,6 +201,13 @@ export function FarmManagement() {
             <SkeletonCard />
             <SkeletonCard />
           </>
+        ) : loadError ? (
+          <Card className="xl:col-span-2">
+            <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-sm text-foreground-muted">Farm records are unavailable until the server responds.</p>
+              <Button size="sm" variant="outline" onClick={() => void loadFarms()}>Try again</Button>
+            </CardBody>
+          </Card>
         ) : filteredFarms.length === 0 ? (
           <Card className="xl:col-span-2">
             <CardBody className="flex flex-col items-center gap-3 py-10 text-center">
@@ -285,7 +295,7 @@ export function FarmManagement() {
         )}
       </div>
 
-      <FarmForm isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} farm={editingFarm} onSubmit={handleSubmit} />
+      <FarmForm isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setMutationError(null); }} farm={editingFarm} onSubmit={handleSubmit} submitError={mutationError} />
     </div>
   );
 }

@@ -59,7 +59,7 @@ export function AppRoutes() {
       </Route>
 
       {/* Design system gallery — no layout chrome, dev-only, unlinked from nav */}
-      <Route path={ROUTES.showcase} element={<ComponentShowcase />} />
+      {import.meta.env.DEV && <Route path={ROUTES.showcase} element={<ComponentShowcase />} />}
 
       {/* Standalone error pages */}
       <Route path={ROUTES.forbidden} element={<Forbidden />} />

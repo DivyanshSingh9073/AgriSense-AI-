@@ -93,15 +93,7 @@ export function Register() {
               {...register('agreeToTerms')}
             />
             <span>
-              I agree to the{' '}
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-700">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="#" className="font-medium text-primary-600 hover:text-primary-700">
-                Privacy Policy
-              </a>
-              .
+              I agree to the Terms of Service and Privacy Policy.
             </span>
           </label>
           {errors.agreeToTerms && (

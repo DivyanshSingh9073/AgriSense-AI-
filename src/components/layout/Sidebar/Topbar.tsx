@@ -1,6 +1,8 @@
-import { MdMenu, MdOutlineDarkMode, MdOutlineLightMode, MdOutlineNotifications } from 'react-icons/md';
+import { Link } from 'react-router-dom';
+import { MdMenu, MdOutlineDarkMode, MdOutlineLightMode } from 'react-icons/md';
 import { Avatar } from '@/components/ui';
-import { useTheme } from '@/hooks';
+import { ROUTES } from '@/constants';
+import { useAuth, useTheme } from '@/hooks';
 
 export interface TopbarProps {
   onMenuClick: () => void;
@@ -9,6 +11,7 @@ export interface TopbarProps {
 /** Header bar for the dashboard shell: mobile menu toggle, theme switch, profile. */
 export function Topbar({ onMenuClick }: TopbarProps) {
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { user } = useAuth();
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-4 sm:px-6">
@@ -35,15 +38,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           {resolvedTheme === 'dark' ? <MdOutlineLightMode className="h-5 w-5" /> : <MdOutlineDarkMode className="h-5 w-5" />}
         </button>
 
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="rounded-lg p-2 text-foreground-muted hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        >
-          <MdOutlineNotifications className="h-5 w-5" />
-        </button>
-
-        <Avatar name="Divyansh Farmer" size="sm" status="online" />
+        <Link to={ROUTES.dashboard.profile} aria-label="Open profile" className="rounded-full focus-ring">
+          <Avatar name={user?.name ?? 'Profile'} src={user?.avatarUrl ?? undefined} size="sm" />
+        </Link>
       </div>
     </header>
   );

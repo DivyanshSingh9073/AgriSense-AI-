@@ -56,6 +56,7 @@ export function Reports() {
   const [selectedFarmId, setSelectedFarmId] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<ReportType>('crop_health');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -82,6 +83,7 @@ export function Reports() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    setGenerationError(null);
     try {
       const entry = await reportsService.generate(
         {
@@ -91,6 +93,8 @@ export function Reports() {
         selectedFarm?.farm_name,
       );
       setHistory((prev) => [entry, ...prev]);
+    } catch {
+      setGenerationError('Could not generate a report. Check the backend connection and try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -106,6 +110,12 @@ export function Reports() {
       {loadError && (
         <Alert variant="error" className="mt-6" onClose={() => setLoadError(null)}>
           {loadError}
+        </Alert>
+      )}
+
+      {generationError && (
+        <Alert variant="error" className="mt-6" onClose={() => setGenerationError(null)}>
+          {generationError}
         </Alert>
       )}
 
@@ -203,6 +213,7 @@ export function Reports() {
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="primary">{REPORT_TYPE_LABELS[report.reportType]}</Badge>
+                        {report.isLocal && <Badge variant="neutral">Saved on this device</Badge>}
                         <span className="text-xs text-foreground-muted">
                           {new Date(report.createdAt).toLocaleString()}
                         </span>

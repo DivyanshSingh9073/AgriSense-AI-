@@ -91,8 +91,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await authService.logout();
-    clearSession();
+    try {
+      await authService.logout();
+    } finally {
+      clearSession();
+    }
   }, [clearSession]);
 
   const forgotPassword = useCallback(async (payload: ForgotPasswordPayload) => {

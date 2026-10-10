@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   MdOutlineBugReport,
@@ -79,7 +78,9 @@ export function DiseaseDetection() {
     try {
       setResult(await diseaseDetectionService.analyze(image));
     } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : 'Could not analyze this image right now.';
+      const message = requestError && typeof requestError === 'object' && 'message' in requestError
+        ? String(requestError.message)
+        : 'Could not analyze this image right now.';
       setError(message);
     } finally {
       setIsAnalyzing(false);

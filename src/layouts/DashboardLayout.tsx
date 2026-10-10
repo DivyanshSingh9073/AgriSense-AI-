@@ -35,7 +35,7 @@ export function DashboardLayout() {
               exit={{ x: '-100%' }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              <Sidebar collapsed={false} onToggle={() => setMobileOpen(false)} />
+              <Sidebar collapsed={false} mobile onToggle={() => setMobileOpen(false)} />
             </motion.div>
           </>
         )}

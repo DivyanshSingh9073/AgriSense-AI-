@@ -51,4 +51,6 @@ export interface ReportListItem {
   reportType: ReportType;
   summary: string;
   createdAt: string;
+  /** Present only for entries cached in this browser after a successful API response. */
+  isLocal?: boolean;
 }

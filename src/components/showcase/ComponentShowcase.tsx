@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   FiDroplet,
   FiSun,
@@ -35,7 +35,7 @@ import { Skeleton } from "../ui/Skeleton";
  * keep mounted behind a dev-only route.
  */
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className="mb-16">
       <div className="mb-6 border-b border-border pb-4">
@@ -47,7 +47,7 @@ function Section({ title, description, children }: { title: string; description?
   );
 }
 
-function Row({ children }: { children: React.ReactNode }) {
+function Row({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-center gap-4">{children}</div>;
 }
 

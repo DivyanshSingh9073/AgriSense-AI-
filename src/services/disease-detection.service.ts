@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import { api } from './api/axiosInstance';
 import { API_ENDPOINTS } from './api/endpoints';
 import type { DiseaseDetectionResult } from '@/types';
@@ -13,9 +12,7 @@ export const diseaseDetectionService = {
     const formData = new FormData();
     formData.append('image', image);
 
-    const { data } = await api.post<unknown>(API_ENDPOINTS.diseaseDetection.analyze, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const { data } = await api.post<unknown>(API_ENDPOINTS.diseaseDetection.analyze, formData);
 
     if (!isObject(data)) return {};
     if (isObject(data.data)) return data.data;

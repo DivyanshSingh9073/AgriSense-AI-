@@ -94,7 +94,16 @@ export function Dashboard() {
         </Alert>
       )}
 
-      {isLoading ? (
+      {loadError && !isLoading ? (
+        <Card className="mt-8">
+          <CardBody className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-foreground-muted">Dashboard totals are unavailable until the server responds.</p>
+            <button type="button" onClick={() => void loadDashboard()} className="text-sm font-semibold text-primary-600 underline underline-offset-2">
+              Try again
+            </button>
+          </CardBody>
+        </Card>
+      ) : isLoading ? (
         <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SkeletonCard />
           <SkeletonCard />
@@ -197,6 +206,7 @@ export function Dashboard() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{REPORT_TYPE_LABELS[report.reportType]}</p>
                       <p className="mt-0.5 truncate text-xs text-foreground-muted">{report.farmName ?? 'All farms'}</p>
+                      {report.isLocal && <p className="mt-0.5 text-xs text-foreground-muted">Saved on this device</p>}
                     </div>
                     <span className="shrink-0 text-xs text-foreground-muted">{formatDate(report.createdAt)}</span>
                   </div>
