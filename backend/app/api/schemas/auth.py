@@ -77,3 +77,30 @@ class TokenPair(BaseModel):
 class AuthSession(BaseModel):
     user: UserProfile
     tokens: TokenPair
+
+
+class VerificationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=128)
+
+
+class ResendVerificationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: EmailStr) -> str:
+        return str(value).strip().lower()
+
+
+class VerificationDispatch(BaseModel):
+    email: EmailStr
+    email_sent: bool = Field(serialization_alias="emailSent")
+    retry_after_seconds: int | None = Field(default=None, serialization_alias="retryAfterSeconds")
+
+
+class VerificationResult(BaseModel):
+    verified: bool

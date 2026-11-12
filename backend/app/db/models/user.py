@@ -30,3 +30,13 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    email_verification_challenges: Mapped[list["EmailVerificationChallenge"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    reports: Mapped[list["Report"]] = relationship(
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

@@ -9,7 +9,7 @@ export const APP_CONFIG = {
   tagline: 'Precision Agriculture Platform',
   version: '0.1.0',
   env: import.meta.env.VITE_APP_ENV ?? 'development',
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000/api/v1',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
   isProd: import.meta.env.VITE_APP_ENV === 'production',
   supportEmail: 'support@agrisense.ai',
 } as const;

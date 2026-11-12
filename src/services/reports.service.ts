@@ -4,6 +4,19 @@ import type { GenerateReportPayload, GeneratedReport, ReportListItem } from '@/t
 
 const HISTORY_STORAGE_KEY = 'agrisense.reportHistory';
 
+function formatReport(report: GeneratedReport): ReportListItem {
+  return {
+    id: report.id,
+    farmId: report.farm_id,
+    farmName: report.farm_name ?? undefined,
+    reportType: report.report_type,
+    summary: report.summary,
+    createdAt: report.created_at,
+    title: report.title,
+    content: report.content,
+  };
+}
+
 function readHistory(): ReportListItem[] {
   try {
     const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
@@ -17,42 +30,25 @@ function readHistory(): ReportListItem[] {
   }
 }
 
-function writeHistory(items: ReportListItem[]): void {
-  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(items));
-}
-
-function saveToHistory(entry: ReportListItem): void {
-  const history = readHistory();
-  writeHistory([entry, ...history].slice(0, 50));
-}
-
 export const reportsService = {
+  listLocalHistory(): ReportListItem[] {
+    return readHistory();
+  },
+
   /**
-  * Merge server reports with successful reports cached in this browser.
+   * Merge persisted reports with legacy reports retained in this browser.
    */
   async list(): Promise<ReportListItem[]> {
-    const { data } = await api.get<{ reports?: ReportListItem[] }>(API_ENDPOINTS.reports.list);
-    const remote = Array.isArray(data?.reports) ? data.reports : [];
+    const { data } = await api.get<{ reports: GeneratedReport[] }>(API_ENDPOINTS.reports.list);
+    const remote = data.reports.map(formatReport);
     return [...remote, ...readHistory()];
   },
 
-  async generate(payload: GenerateReportPayload, farmName?: string): Promise<ReportListItem> {
+  async generate(payload: GenerateReportPayload): Promise<ReportListItem> {
     const { data } = await api.post<{ report: GeneratedReport }>(
       API_ENDPOINTS.reports.generate,
       payload,
     );
-    const summary = data.report.summary;
-
-    const entry: ReportListItem = {
-      id: crypto.randomUUID(),
-      farmId: payload.farm_id,
-      farmName,
-      reportType: payload.report_type,
-      summary,
-      createdAt: new Date().toISOString(),
-      isLocal: true,
-    };
-    saveToHistory(entry);
-    return entry;
+    return formatReport(data.report);
   },
 };

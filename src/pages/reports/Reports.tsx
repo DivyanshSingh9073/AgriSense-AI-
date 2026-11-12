@@ -29,12 +29,30 @@ const REPORT_TYPE_LABELS: Record<ReportType, string> = {
 
 function downloadReport(report: ReportListItem) {
   const lines = [
-    `AgriSense AI — ${REPORT_TYPE_LABELS[report.reportType]} Report`,
+    `AgriSense AI — ${report.title ?? `${REPORT_TYPE_LABELS[report.reportType]} Report`}`,
     `Generated: ${new Date(report.createdAt).toLocaleString()}`,
     report.farmName ? `Farm: ${report.farmName}` : 'Farm: All farms',
     '',
     report.summary,
   ];
+  if (report.content) {
+    lines.push('', 'Recorded farm profiles:');
+    for (const farm of report.content.farm_profiles) {
+      const details = [
+        `Location: ${farm.location}`,
+        farm.farm_size !== null ? `Size: ${farm.farm_size} acres` : null,
+        farm.soil_type ? `Recorded soil type: ${farm.soil_type}` : null,
+        farm.water_source ? `Recorded water source: ${farm.water_source}` : null,
+      ].filter((detail): detail is string => detail !== null);
+      lines.push(`- ${farm.name} (${details.join('; ')})`);
+    }
+    if (report.content.unavailable_data.length > 0) {
+      lines.push('', 'Data not available:', ...report.content.unavailable_data.map((item) => `- ${item}`));
+    }
+    if (report.content.limitations.length > 0) {
+      lines.push('', 'Limitations:', ...report.content.limitations.map((item) => `- ${item}`));
+    }
+  }
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -90,9 +108,8 @@ export function Reports() {
           farm_id: selectedFarm ? selectedFarm.id : null,
           report_type: selectedType,
         },
-        selectedFarm?.farm_name,
       );
-      setHistory((prev) => [entry, ...prev]);
+      setHistory((prev) => [entry, ...prev.filter((report) => report.id !== entry.id)]);
     } catch {
       setGenerationError('Could not generate a report. Check the backend connection and try again.');
     } finally {
@@ -219,8 +236,13 @@ export function Reports() {
                         </span>
                       </div>
                       <p className="mt-1 text-sm font-medium text-foreground">
-                        {report.farmName ?? 'All farms'}
+                        {report.title ?? report.farmName ?? 'All farms'}
                       </p>
+                      {report.title && (
+                        <p className="mt-0.5 text-xs text-foreground-muted">
+                          {report.farmName ?? 'All farms'}
+                        </p>
+                      )}
                     </div>
                     <Button
                       variant="outline"
@@ -232,6 +254,42 @@ export function Reports() {
                     </Button>
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-foreground-muted">{report.summary}</p>
+                  {report.content && (
+                    <div className="mt-4 space-y-3 border-t border-border pt-3 text-sm">
+                      {report.content.farm_profiles.length > 0 && (
+                        <div>
+                          <h3 className="font-medium text-foreground">Recorded farm profiles</h3>
+                          <ul className="mt-1 space-y-1 text-foreground-muted">
+                            {report.content.farm_profiles.map((farm) => (
+                              <li key={farm.id}>
+                                <span className="font-medium text-foreground">{farm.name}</span>
+                                {' — '}{farm.location}
+                                {farm.farm_size !== null && `; ${farm.farm_size} acres recorded`}
+                                {farm.soil_type && `; soil type: ${farm.soil_type}`}
+                                {farm.water_source && `; water source: ${farm.water_source}`}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {report.content.unavailable_data.length > 0 && (
+                        <div>
+                          <h3 className="font-medium text-foreground">Data not available for assessment</h3>
+                          <ul className="mt-1 list-inside list-disc text-foreground-muted">
+                            {report.content.unavailable_data.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                      {report.content.limitations.length > 0 && (
+                        <div>
+                          <h3 className="font-medium text-foreground">Report limitations</h3>
+                          <ul className="mt-1 list-inside list-disc text-foreground-muted">
+                            {report.content.limitations.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardBody>
               </Card>
             ))

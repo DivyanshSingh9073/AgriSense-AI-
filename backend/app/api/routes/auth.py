@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.api.schemas.auth import (
@@ -12,9 +12,14 @@ from app.api.schemas.auth import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     TokenPair,
     UserProfile,
+    VerificationDispatch,
+    VerificationRequest,
+    VerificationResult,
 )
+from app.auth.email_verification import consume_verification_token, dispatch_verification
 from app.auth.dependencies import get_current_user
 from app.auth.security import (
     DUMMY_PASSWORD_HASH,
@@ -25,6 +30,7 @@ from app.auth.security import (
 )
 from app.db.database import get_db_session
 from app.db.models import RefreshToken, User
+from app.services.email import EmailDeliveryError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -58,32 +64,54 @@ def _auth_response(user: User, session: Session) -> AuthSession:
 
 @router.post(
     "/register",
-    response_model=APIResponse[AuthSession],
-    status_code=status.HTTP_201_CREATED,
+    response_model=APIResponse[VerificationDispatch],
+    status_code=status.HTTP_202_ACCEPTED,
 )
 def register(payload: RegisterRequest, session: Session = Depends(get_db_session)):
-    existing_user = session.scalar(select(User).where(User.email == payload.email))
-    if existing_user is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists.")
-
-    user = User(
-        name=payload.name,
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-    )
-    session.add(user)
     try:
-        session.flush()
-        session.refresh(user)
-        auth_session = _auth_response(user, session)
+        user = session.scalar(select(User).where(User.email == payload.email))
+        if user is None:
+            candidate = User(
+                name=payload.name,
+                email=payload.email,
+                password_hash=hash_password(payload.password),
+            )
+            try:
+                session.add(candidate)
+                session.flush()
+                user = candidate
+            except IntegrityError:
+                session.rollback()
+                user = session.scalar(select(User).where(User.email == payload.email))
+        dispatch = dispatch_verification(session, payload.email, user)
         session.commit()
-    except IntegrityError:
+    except EmailDeliveryError as exc:
         session.rollback()
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists.",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
         ) from None
-    return {"success": True, "message": "Account created.", "data": auth_session}
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Verification email could not be sent. Please try again.",
+        ) from None
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Verification email could not be sent. Please try again.",
+        ) from None
+
+    return {
+        "success": True,
+        "message": "If this address is eligible, verification instructions were sent.",
+        "data": VerificationDispatch(
+            email=payload.email,
+            email_sent=dispatch.email_sent,
+            retry_after_seconds=dispatch.retry_after_seconds,
+        ),
+    }
 
 
 @router.post("/login", response_model=APIResponse[AuthSession])
@@ -97,6 +125,11 @@ def login(payload: LoginRequest, session: Session = Depends(get_db_session)):
             detail="Invalid email or password.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not user.is_email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification is required before signing in.",
+        )
     auth_session = _auth_response(user, session)
     session.commit()
     return {"success": True, "message": "Login successful.", "data": auth_session}
@@ -105,6 +138,53 @@ def login(payload: LoginRequest, session: Session = Depends(get_db_session)):
 @router.get("/me", response_model=APIResponse[UserProfile])
 def current_profile(user: User = Depends(get_current_user)):
     return {"success": True, "message": "Current user.", "data": _profile(user)}
+
+
+@router.post("/verify-email", response_model=APIResponse[VerificationResult])
+def verify_email(payload: VerificationRequest, session: Session = Depends(get_db_session)):
+    consume_verification_token(session, payload.token)
+    return {
+        "success": True,
+        "message": "Email verified. You can now sign in.",
+        "data": VerificationResult(verified=True),
+    }
+
+
+@router.post(
+    "/resend-verification",
+    response_model=APIResponse[VerificationDispatch],
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def resend_verification(
+    payload: ResendVerificationRequest,
+    session: Session = Depends(get_db_session),
+):
+    try:
+        user = session.scalar(select(User).where(User.email == payload.email))
+        dispatch = dispatch_verification(session, payload.email, user)
+        session.commit()
+    except EmailDeliveryError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from None
+    except (IntegrityError, SQLAlchemyError):
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Verification email could not be sent. Please try again.",
+        ) from None
+
+    return {
+        "success": True,
+        "message": "If this address is eligible, verification instructions were sent.",
+        "data": VerificationDispatch(
+            email=payload.email,
+            email_sent=dispatch.email_sent,
+            retry_after_seconds=dispatch.retry_after_seconds,
+        ),
+    }
 
 
 @router.post("/refresh", response_model=APIResponse[TokenPair])
@@ -135,6 +215,11 @@ def refresh(payload: RefreshRequest, session: Session = Depends(get_db_session))
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification is required before signing in.",
         )
     issued = create_token_pair(str(user.id))
     consumed = session.execute(

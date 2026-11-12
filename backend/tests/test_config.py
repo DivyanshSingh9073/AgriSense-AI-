@@ -57,3 +57,15 @@ def test_production_rejects_missing_or_insecure_jwt_secret(
 
     with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
         get_settings()
+
+
+def test_production_smtp_requires_starttls(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET_KEY", "test-only-production-key-that-is-long-enough")
+    monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("SMTP_FROM_ADDRESS", "no-reply@example.com")
+    monkeypatch.setenv("SMTP_USE_STARTTLS", "false")
+
+    with pytest.raises(ValueError, match="STARTTLS"):
+        get_settings()

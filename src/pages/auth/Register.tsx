@@ -26,8 +26,11 @@ export function Register() {
   const onSubmit = async (values: RegisterFormValues) => {
     setFormError(null);
     try {
-      await registerUser({ name: values.name, email: values.email, password: values.password });
-      navigate(ROUTES.auth.verifyEmail, { replace: true });
+      const result = await registerUser({ name: values.name, email: values.email, password: values.password });
+      navigate(
+        { pathname: ROUTES.auth.verifyEmail, search: `?email=${encodeURIComponent(result.email)}` },
+        { replace: true, state: result },
+      );
     } catch (err) {
       const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : null;
       setFormError(message ?? 'Unable to create your account. Please try again.');

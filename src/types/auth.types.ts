@@ -46,3 +46,13 @@ export interface AuthResponse {
   user: User;
   tokens: AuthTokens;
 }
+
+export interface VerificationDispatch {
+  email: string;
+  emailSent: boolean;
+  retryAfterSeconds?: number | null;
+}
+
+export interface VerificationResult {
+  verified: boolean;
+}

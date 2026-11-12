@@ -14,6 +14,7 @@ import type {
   RegisterPayload,
   ResetPasswordPayload,
   User,
+  VerificationDispatch,
   VerifyEmailPayload,
 } from '@/types';
 
@@ -23,12 +24,12 @@ interface AuthContextValue {
   isInitializing: boolean;
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
-  register: (payload: RegisterPayload) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<VerificationDispatch>;
   logout: () => Promise<void>;
   forgotPassword: (payload: ForgotPasswordPayload) => Promise<void>;
   resetPassword: (payload: ResetPasswordPayload) => Promise<void>;
   verifyEmail: (payload: VerifyEmailPayload) => Promise<void>;
-  resendVerification: () => Promise<void>;
+  resendVerification: (email: string) => Promise<VerificationDispatch>;
   /** Re-fetches the current user, e.g. after profile edits or email verification. */
   refreshUser: () => Promise<void>;
 }
@@ -85,10 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(loggedInUser);
   }, []);
 
-  const register = useCallback(async (payload: RegisterPayload) => {
-    const { user: newUser } = await authService.register(payload);
-    setUser(newUser);
-  }, []);
+  const register = useCallback((payload: RegisterPayload) => authService.register(payload), []);
 
   const logout = useCallback(async () => {
     try {
@@ -110,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.verifyEmail(payload);
   }, []);
 
-  const resendVerification = useCallback(async () => {
-    await authService.resendVerification();
+  const resendVerification = useCallback(async (email: string) => {
+    return authService.resendVerification(email);
   }, []);
 
   const refreshUser = useCallback(async () => {

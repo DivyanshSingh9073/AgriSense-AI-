@@ -41,6 +41,7 @@ def farm_client(monkeypatch: pytest.MonkeyPatch):
                     name=f"Farmer {index}",
                     email=f"farmer{index}@example.test",
                     password_hash=hash_password("StrongPass1"),
+                    is_email_verified=True,
                 )
                 for index, user_id in enumerate(user_ids, start=1)
             ]

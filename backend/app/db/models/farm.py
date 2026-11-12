@@ -30,3 +30,4 @@ class Farm(Base):
     )
 
     owner: Mapped["User"] = relationship(back_populates="farms")
+    reports: Mapped[list["Report"]] = relationship(back_populates="farm", passive_deletes=True)

@@ -1,5 +1,8 @@
 import asyncio
+import hashlib
 from datetime import datetime, timedelta, timezone
+from urllib.parse import parse_qs, urlsplit
+from uuid import UUID
 
 import httpx
 import jwt
@@ -8,12 +11,14 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.auth.security import hash_password, verify_password
+from app.auth import email_verification as email_verification_service
+from app.auth.security import create_token_pair, hash_password, verify_password
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.database import get_db_session
-from app.db.models import User
+from app.db.models import EmailVerificationChallenge, RefreshToken, User
 from app.main import app
+from app.services.email import EmailDeliveryError
 
 
 @pytest.fixture
@@ -35,24 +40,36 @@ def auth_client(monkeypatch: pytest.MonkeyPatch):
             yield session
 
     app.dependency_overrides[get_db_session] = override_db_session
+    outbox: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        email_verification_service,
+        "send_verification_email",
+        lambda recipient, url: outbox.append((recipient, url)),
+    )
 
     async def request(method: str, path: str, **kwargs) -> httpx.Response:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             return await client.request(method, path, **kwargs)
 
-    yield request, engine
+    yield request, engine, outbox
 
     app.dependency_overrides.pop(get_db_session, None)
     engine.dispose()
 
 
 def api_request(auth_client, method: str, path: str, **kwargs) -> httpx.Response:
-    request, _ = auth_client
+    request, _, _ = auth_client
     return asyncio.run(request(method, path, **kwargs))
 
 
-def test_register_persists_password_hash_and_returns_frontend_shape(auth_client) -> None:
+def sent_verification_token(auth_client) -> str:
+    outbox = auth_client[2]
+    assert outbox
+    return parse_qs(urlsplit(outbox[-1][1]).query)["token"][0]
+
+
+def test_register_sends_verification_link_without_issuing_session(auth_client) -> None:
     response = api_request(
         auth_client,
         "POST",
@@ -60,25 +77,39 @@ def test_register_persists_password_hash_and_returns_frontend_shape(auth_client)
         json={"name": "Test Farmer", "email": "Farmer@example.com", "password": "StrongPass1"},
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     payload = response.json()
     assert payload["success"] is True
-    assert payload["data"]["user"]["email"] == "farmer@example.com"
-    assert payload["data"]["user"]["isEmailVerified"] is False
-    assert payload["data"]["user"]["role"] == "farmer"
-    assert payload["data"]["user"]["createdAt"]
-    assert payload["data"]["user"]["avatarUrl"] is None
-    assert payload["data"]["tokens"]["accessToken"]
-    assert payload["data"]["tokens"]["refreshToken"]
+    assert payload["data"]["email"] == "farmer@example.com"
+    assert payload["data"]["emailSent"] is True
+    assert "tokens" not in payload["data"]
     assert "password" not in response.text
     assert "password_hash" not in response.text
+    assert auth_client[2][-1][0] == "farmer@example.com"
+    assert sent_verification_token(auth_client) not in response.text
 
     engine = auth_client[1]
     with Session(engine) as session:
         user = session.scalar(select(User).where(User.email == "farmer@example.com"))
         assert user is not None
+        assert user.is_email_verified is False
         assert user.password_hash != "StrongPass1"
         assert verify_password("StrongPass1", user.password_hash)
+        challenge = session.scalar(select(EmailVerificationChallenge).where(EmailVerificationChallenge.user_id == user.id))
+        assert challenge is not None
+        assert challenge.code_hash == hashlib.sha256(sent_verification_token(auth_client).rsplit(".", 1)[1].encode()).hexdigest()
+
+    verified = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/verify-email",
+        json={"token": sent_verification_token(auth_client)},
+    )
+    assert verified.status_code == 200
+    assert verified.json()["data"]["verified"] is True
+    with Session(engine) as session:
+        user = session.scalar(select(User).where(User.email == "farmer@example.com"))
+        assert user.is_email_verified is True
 
 
 def test_register_rejects_duplicate_email_case_insensitively(auth_client) -> None:
@@ -91,13 +122,20 @@ def test_register_rejects_duplicate_email_case_insensitively(auth_client) -> Non
         json={**body, "email": "FARMER@example.com"},
     )
 
-    assert first.status_code == 201
-    assert duplicate.status_code == 409
+    assert first.status_code == 202
+    assert duplicate.status_code == 202
+    assert first.json()["message"] == duplicate.json()["message"]
+    assert first.json()["data"]["email"] == duplicate.json()["data"]["email"]
+    assert duplicate.json()["data"]["emailSent"] is False
+    with Session(auth_client[1]) as session:
+        assert session.query(User).where(User.email == "farmer@example.com").count() == 1
 
 
 def test_login_accepts_valid_credentials_and_rejects_incorrect_password(auth_client) -> None:
     body = {"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"}
     api_request(auth_client, "POST", "/api/v1/auth/register", json=body)
+    token = sent_verification_token(auth_client)
+    assert api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": token}).status_code == 200
 
     success = api_request(
         auth_client,
@@ -119,13 +157,24 @@ def test_login_accepts_valid_credentials_and_rejects_incorrect_password(auth_cli
 
 
 def test_me_requires_valid_access_token_and_returns_safe_profile(auth_client) -> None:
-    registration = api_request(
+    api_request(
         auth_client,
         "POST",
         "/api/v1/auth/register",
         json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
-    ).json()
-    tokens = registration["data"]["tokens"]
+    )
+    assert api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/verify-email",
+        json={"token": sent_verification_token(auth_client)},
+    ).status_code == 200
+    tokens = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/login",
+        json={"email": "farmer@example.com", "password": "StrongPass1"},
+    ).json()["data"]["tokens"]
 
     missing = api_request(auth_client, "GET", "/api/v1/auth/me")
     valid = api_request(
@@ -149,9 +198,9 @@ def test_me_requires_valid_access_token_and_returns_safe_profile(auth_client) ->
 
 
 def test_me_rejects_expired_token(auth_client) -> None:
-    _, engine = auth_client
+    _, engine, _ = auth_client
     with Session(engine) as session:
-        user = User(name="Test Farmer", email="farmer@example.com", password_hash=hash_password("StrongPass1"))
+        user = User(name="Test Farmer", email="farmer@example.com", password_hash=hash_password("StrongPass1"), is_email_verified=True)
         session.add(user)
         session.commit()
         subject = str(user.id)
@@ -198,9 +247,9 @@ def test_me_rejects_malformed_or_tampered_tokens(auth_client) -> None:
 
 
 def test_me_rejects_token_signed_with_unconfigured_algorithm(auth_client) -> None:
-    _, engine = auth_client
+    _, engine, _ = auth_client
     with Session(engine) as session:
-        user = User(name="Test Farmer", email="farmer@example.com", password_hash=hash_password("StrongPass1"))
+        user = User(name="Test Farmer", email="farmer@example.com", password_hash=hash_password("StrongPass1"), is_email_verified=True)
         session.add(user)
         session.commit()
         subject = str(user.id)
@@ -229,14 +278,33 @@ def test_me_rejects_token_signed_with_unconfigured_algorithm(auth_client) -> Non
 
 
 def test_refresh_rotates_frontend_compatible_token_pair(auth_client) -> None:
-    registration = api_request(
+    api_request(
         auth_client,
         "POST",
         "/api/v1/auth/register",
         json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
-    ).json()
-    old_refresh = registration["data"]["tokens"]["refreshToken"]
-    access_token = registration["data"]["tokens"]["accessToken"]
+    )
+    token_pair = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/login",
+        json={"email": "farmer@example.com", "password": "StrongPass1"},
+    )
+    assert token_pair.status_code == 403
+    assert api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/verify-email",
+        json={"token": sent_verification_token(auth_client)},
+    ).status_code == 200
+    token_pair = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/login",
+        json={"email": "farmer@example.com", "password": "StrongPass1"},
+    ).json()["data"]["tokens"]
+    old_refresh = token_pair["refreshToken"]
+    access_token = token_pair["accessToken"]
 
     access_as_refresh = api_request(
         auth_client,
@@ -256,11 +324,14 @@ def test_refresh_rotates_frontend_compatible_token_pair(auth_client) -> None:
     assert replay.status_code == 401
 
 
-def test_registration_does_not_create_user_when_jwt_is_unconfigured(
+def test_registration_rolls_back_new_user_when_email_delivery_fails(
     auth_client,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    def fail_delivery(recipient: str, url: str) -> None:
+        raise EmailDeliveryError("Email delivery failed.")
+
+    monkeypatch.setattr(email_verification_service, "send_verification_email", fail_delivery)
 
     response = api_request(
         auth_client,
@@ -272,6 +343,224 @@ def test_registration_does_not_create_user_when_jwt_is_unconfigured(
     assert response.status_code == 503
     with Session(auth_client[1]) as session:
         assert session.scalar(select(User)) is None
+
+
+def test_resend_is_generic_for_unknown_email_and_rate_limited_per_address(auth_client) -> None:
+    first = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/resend-verification",
+        json={"email": "not-registered@example.com"},
+    )
+    second = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/resend-verification",
+        json={"email": "not-registered@example.com"},
+    )
+
+    assert first.status_code == 202
+    assert first.json()["data"]["emailSent"] is True
+    assert second.status_code == 202
+    assert second.json()["message"] == first.json()["message"]
+    assert second.json()["data"]["emailSent"] is False
+    assert second.json()["data"]["retryAfterSeconds"] > 0
+
+
+def test_verification_rejects_invalid_expired_and_reused_tokens(auth_client) -> None:
+    api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/register",
+        json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
+    )
+    token = sent_verification_token(auth_client)
+
+    invalid = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": token + "bad"})
+    assert invalid.status_code == 400
+
+    expired_token = token
+    challenge_id = UUID(expired_token.split(".", 1)[0])
+    with Session(auth_client[1]) as session:
+        row = session.get(EmailVerificationChallenge, challenge_id)
+        row.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        session.commit()
+    expired = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": expired_token})
+    assert expired.status_code == 400
+
+
+def test_verification_token_is_single_use(auth_client) -> None:
+    api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/register",
+        json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
+    )
+    token = sent_verification_token(auth_client)
+
+    first = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": token})
+    replay = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": token})
+
+    assert first.status_code == 200
+    assert first.json()["data"]["verified"] is True
+    assert replay.status_code == 400
+
+
+def test_verification_attempts_are_limited(auth_client, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EMAIL_VERIFICATION_MAX_ATTEMPTS", "2")
+    api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/register",
+        json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
+    )
+    token = sent_verification_token(auth_client)
+    challenge_id, secret = token.split(".", 1)
+
+    bad_token = f"{challenge_id}.{secret[:-1]}x"
+    first = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": bad_token})
+    second = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": bad_token})
+    correct = api_request(auth_client, "POST", "/api/v1/auth/verify-email", json={"token": token})
+
+    assert first.status_code == 400
+    assert second.status_code == 429
+    assert correct.status_code == 429
+
+
+def test_resend_hourly_limit_is_enforced(auth_client, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EMAIL_VERIFICATION_MAX_RESENDS_PER_HOUR", "2")
+    monkeypatch.setenv("EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS", "1")
+    api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/register",
+        json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
+    )
+    email_hash = email_verification_service._email_hash("farmer@example.com")
+
+    with Session(auth_client[1]) as session:
+        challenge = session.scalar(
+            select(EmailVerificationChallenge).where(EmailVerificationChallenge.email_hash == email_hash)
+        )
+        challenge.last_sent_at = datetime.now(timezone.utc) - timedelta(seconds=2)
+        session.commit()
+
+    second = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/resend-verification",
+        json={"email": "farmer@example.com"},
+    )
+    assert second.json()["data"]["emailSent"] is True
+
+    with Session(auth_client[1]) as session:
+        challenge = session.scalar(
+            select(EmailVerificationChallenge).where(EmailVerificationChallenge.email_hash == email_hash)
+        )
+        challenge.last_sent_at = datetime.now(timezone.utc) - timedelta(seconds=2)
+        session.commit()
+
+    third = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/resend-verification",
+        json={"email": "farmer@example.com"},
+    )
+    assert third.status_code == 202
+    assert third.json()["data"]["emailSent"] is False
+    assert third.json()["data"]["retryAfterSeconds"] > 0
+
+
+def test_resend_smtp_failure_rolls_back_challenge_state(auth_client, monkeypatch: pytest.MonkeyPatch) -> None:
+    api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/register",
+        json={"name": "Test Farmer", "email": "farmer@example.com", "password": "StrongPass1"},
+    )
+    email_hash = email_verification_service._email_hash("farmer@example.com")
+    with Session(auth_client[1]) as session:
+        challenge = session.scalar(
+            select(EmailVerificationChallenge).where(EmailVerificationChallenge.email_hash == email_hash)
+        )
+        challenge.last_sent_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+        session.commit()
+        original_hash = challenge.code_hash
+        original_count = challenge.resend_count
+
+    def fail_delivery(recipient: str, url: str) -> None:
+        raise EmailDeliveryError("Email delivery failed.")
+
+    monkeypatch.setattr(email_verification_service, "send_verification_email", fail_delivery)
+    response = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/resend-verification",
+        json={"email": "farmer@example.com"},
+    )
+    assert response.status_code == 503
+    with Session(auth_client[1]) as session:
+        challenge = session.scalar(
+            select(EmailVerificationChallenge).where(EmailVerificationChallenge.email_hash == email_hash)
+        )
+        assert challenge.code_hash == original_hash
+        assert challenge.resend_count == original_count
+
+
+def test_unverified_legacy_access_token_is_rejected_by_me(auth_client) -> None:
+    _, engine, _ = auth_client
+    with Session(engine) as session:
+        user = User(
+            name="Legacy Farmer",
+            email="legacy@example.com",
+            password_hash=hash_password("StrongPass1"),
+            is_email_verified=False,
+        )
+        session.add(user)
+        session.commit()
+        issued = create_token_pair(str(user.id))
+        access_token = issued.access_token
+        session.add(
+            RefreshToken(
+                jti=issued.refresh_token_id,
+                user_id=user.id,
+                expires_at=issued.refresh_expires_at,
+            )
+        )
+        session.commit()
+
+    response = api_request(
+        auth_client,
+        "GET",
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert response.status_code == 403
+
+    login = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/login",
+        json={"email": "legacy@example.com", "password": "StrongPass1"},
+    )
+    refresh = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/refresh",
+        json={"refreshToken": issued.refresh_token},
+    )
+    assert login.status_code == 403
+    assert refresh.status_code == 403
+
+
+def test_smtp_missing_configuration_fails_safely(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services.email import send_verification_email
+
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    monkeypatch.delenv("SMTP_FROM_ADDRESS", raising=False)
+
+    with pytest.raises(EmailDeliveryError, match="not configured"):
+        send_verification_email("farmer@example.com", "https://example.test/verify-email?token=redacted")
 
 
 def test_registration_validates_email_and_password_policy(auth_client) -> None:

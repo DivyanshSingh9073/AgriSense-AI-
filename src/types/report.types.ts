@@ -35,15 +35,36 @@ export interface GenerateReportPayload {
   report_type: ReportType;
 }
 
-/** Shape returned by `POST /reports/generate`. */
-export interface GeneratedReport {
-  user_id: number;
-  farm_id: number | null;
-  report_type: ReportType;
-  summary: string;
+export interface ReportFarmProfile {
+  id: number;
+  name: string;
+  location: string;
+  farm_size: number | null;
+  soil_type: string | null;
+  water_source: string | null;
 }
 
-/** A single historical report entry, as returned by `GET /reports`. */
+export interface ReportContent {
+  farm_profiles: ReportFarmProfile[];
+  unavailable_data: string[];
+  limitations: string[];
+}
+
+/** Persisted report shape returned by the Reports API. */
+export interface GeneratedReport {
+  id: string;
+  user_id: string;
+  farm_id: number | null;
+  farm_name: string | null;
+  report_type: ReportType;
+  title: string;
+  summary: string;
+  content: ReportContent;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A report formatted for the Reports and dashboard views. */
 export interface ReportListItem {
   id: string;
   farmId: number | null;
@@ -51,6 +72,8 @@ export interface ReportListItem {
   reportType: ReportType;
   summary: string;
   createdAt: string;
-  /** Present only for entries cached in this browser after a successful API response. */
+  title?: string;
+  content?: ReportContent;
+  /** Present only for legacy entries retained in this browser. */
   isLocal?: boolean;
 }

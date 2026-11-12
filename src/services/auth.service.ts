@@ -9,6 +9,8 @@ import type {
   RegisterPayload,
   ResetPasswordPayload,
   User,
+  VerificationDispatch,
+  VerificationResult,
   VerifyEmailPayload,
 } from '@/types';
 
@@ -34,9 +36,8 @@ export const authService = {
     return data.data;
   },
 
-  async register(payload: RegisterPayload): Promise<AuthResponse> {
-    const { data } = await api.post<ApiResponse<AuthResponse>>(API_ENDPOINTS.auth.register, payload);
-    persistSession(data.data);
+  async register(payload: RegisterPayload): Promise<VerificationDispatch> {
+    const { data } = await api.post<ApiResponse<VerificationDispatch>>(API_ENDPOINTS.auth.register, payload);
     return data.data;
   },
 
@@ -63,11 +64,16 @@ export const authService = {
     await api.post(API_ENDPOINTS.auth.resetPassword, payload);
   },
 
-  async verifyEmail(payload: VerifyEmailPayload): Promise<void> {
-    await api.post(API_ENDPOINTS.auth.verifyEmail, payload);
+  async verifyEmail(payload: VerifyEmailPayload): Promise<VerificationResult> {
+    const { data } = await api.post<ApiResponse<VerificationResult>>(API_ENDPOINTS.auth.verifyEmail, payload);
+    return data.data;
   },
 
-  async resendVerification(): Promise<void> {
-    await api.post(API_ENDPOINTS.auth.resendVerification);
+  async resendVerification(email: string): Promise<VerificationDispatch> {
+    const { data } = await api.post<ApiResponse<VerificationDispatch>>(
+      API_ENDPOINTS.auth.resendVerification,
+      { email },
+    );
+    return data.data;
   },
 };
