@@ -31,13 +31,13 @@ The project is under active development. The working application includes accoun
 
 | Area | Status |
 | --- | --- |
-| Registration, login, signed access tokens, and email verification | Implemented |
+| Registration, login, signed access tokens, refresh-token revocation on logout, and email verification | Implemented |
 | PostgreSQL persistence for users, farms, refresh tokens, verification challenges, and reports | Implemented; requires configured database and migrations |
 | Farm create, list, view, update, and delete | Implemented |
-| Dashboard farm totals and device-local legacy report activity | Implemented |
+| Dashboard farm totals and server/device-local report activity | Implemented |
 | Rule-based reports from saved farm profiles and persistent report history | Implemented |
 | Email delivery | Implemented through a configured SMTP server |
-| Logout endpoint, password-reset endpoints, disease-analysis backend, crop-recommendation backend, weather backend, AI chat backend | Not implemented in this backend |
+| Password-reset endpoints, disease-analysis backend, crop-recommendation backend, weather backend, AI chat backend | Not implemented in this backend |
 | Production hosting, deployment manifests, and Docker setup | Not included in this repository |
 
 The frontend contains screens and API clients for some unfinished features. A screen or declared client endpoint does not imply that a corresponding backend API is available. See [Planned and incomplete work](#planned-and-incomplete-work).
@@ -46,10 +46,10 @@ The frontend contains screens and API clients for some unfinished features. A sc
 
 ### Implemented
 
-- **Authentication:** Account registration, email verification, password login, bearer access tokens, and rotating refresh tokens. Passwords are hashed with Argon2. Protected API routes require a verified account.
+- **Authentication:** Account registration, email verification, password login, bearer access tokens, rotating refresh tokens, and authenticated logout that revokes the user's active refresh tokens. Passwords are hashed with Argon2. Protected API routes require a verified account.
 - **Email verification:** Verification links are sent through SMTP. Challenges are stored as hashes, expire, and have resend and attempt limits. Email delivery must be configured for registration to send a link.
 - **Farm management:** Create, list, view, update, and delete a user's farms. Farm records are stored in PostgreSQL and are scoped to their owner.
-- **Dashboard:** Displays farm count, recorded acreage, and locations. Its recent-report summary currently reads legacy report history from the current browser; the Reports page reads persistent server history.
+- **Dashboard:** Displays farm count, recorded acreage, and locations, along with recent reports from the server and legacy reports retained in the current browser.
 - **Rule-based reports:** Generate and store crop-health, weather-summary, soil-analysis, and yield-forecast report records from farm profile fields. Reports do not call AI or weather services. They disclose missing source data and avoid inventing measurements or forecasts.
 - **Report history and export:** List persisted reports for the signed-in user and export report summaries and their structured content as a text file. Older device-local report entries may still appear in the Reports page.
 - **Frontend foundations:** Public home page, protected application routes, responsive shared layouts, form validation, and local display preferences.
@@ -60,7 +60,7 @@ The frontend contains screens and API clients for some unfinished features. A sc
 - Implement AI Chat backend functionality.
 - Implement disease-image analysis and crop recommendation backend functionality.
 - Add AI-powered report analysis only after suitable data sources, safety constraints, and service integrations are defined.
-- Implement password reset and server-side logout/revocation endpoints.
+- Implement password reset endpoints.
 - Add deployment configuration and operational documentation.
 
 ## Screenshots

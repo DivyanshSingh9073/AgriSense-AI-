@@ -78,6 +78,13 @@ export function DiseaseDetection() {
     try {
       setResult(await diseaseDetectionService.analyze(image));
     } catch (requestError) {
+      const status = requestError && typeof requestError === 'object' && 'status' in requestError
+        ? requestError.status
+        : undefined;
+      if (status === 404) {
+        setError('Disease analysis is not implemented by this backend yet. No result was generated.');
+        return;
+      }
       const message = requestError && typeof requestError === 'object' && 'message' in requestError
         ? String(requestError.message)
         : 'Could not analyze this image right now.';

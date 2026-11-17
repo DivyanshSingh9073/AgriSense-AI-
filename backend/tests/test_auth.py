@@ -324,6 +324,50 @@ def test_refresh_rotates_frontend_compatible_token_pair(auth_client) -> None:
     assert replay.status_code == 401
 
 
+def test_logout_revokes_refresh_tokens_for_authenticated_user(auth_client) -> None:
+    _, engine, _ = auth_client
+    with Session(engine) as session:
+        user = User(
+            name="Test Farmer",
+            email="farmer@example.com",
+            password_hash=hash_password("StrongPass1"),
+            is_email_verified=True,
+        )
+        session.add(user)
+        session.flush()
+        issued = create_token_pair(str(user.id))
+        session.add(
+            RefreshToken(
+                jti=issued.refresh_token_id,
+                user_id=user.id,
+                expires_at=issued.refresh_expires_at,
+            )
+        )
+        session.commit()
+
+    unauthenticated = api_request(auth_client, "POST", "/api/v1/auth/logout")
+    response = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/logout",
+        headers={"Authorization": f"Bearer {issued.access_token}"},
+    )
+    replay = api_request(
+        auth_client,
+        "POST",
+        "/api/v1/auth/refresh",
+        json={"refreshToken": issued.refresh_token},
+    )
+
+    assert unauthenticated.status_code == 401
+    assert response.status_code == 204
+    assert replay.status_code == 401
+    with Session(engine) as session:
+        token = session.scalar(select(RefreshToken).where(RefreshToken.jti == issued.refresh_token_id))
+        assert token is not None
+        assert token.revoked_at is not None
+
+
 def test_registration_rolls_back_new_user_when_email_delivery_fails(
     auth_client,
     monkeypatch: pytest.MonkeyPatch,

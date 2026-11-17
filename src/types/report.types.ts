@@ -11,22 +11,22 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
   {
     value: 'crop_health',
     label: 'Crop Health',
-    description: 'Disease risk and overall crop condition summary.',
+    description: 'Farm details and missing crop-health data; no disease or crop-condition assessment is made.',
   },
   {
     value: 'weather_summary',
     label: 'Weather Summary',
-    description: 'Recent conditions and short-term forecast highlights.',
+    description: 'Farm details and missing weather data; no current conditions or forecast are included.',
   },
   {
     value: 'soil_analysis',
     label: 'Soil Analysis',
-    description: 'Soil type, moisture, and nutrient outlook.',
+    description: 'Farm details and missing soil measurements; no soil assessment is made.',
   },
   {
     value: 'yield_forecast',
     label: 'Yield Forecast',
-    description: 'Projected yield based on current field conditions.',
+    description: 'Farm details and missing yield data; no yield forecast is calculated.',
   },
 ];
 

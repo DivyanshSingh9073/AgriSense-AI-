@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -138,6 +138,27 @@ def login(payload: LoginRequest, session: Session = Depends(get_db_session)):
 @router.get("/me", response_model=APIResponse[UserProfile])
 def current_profile(user: User = Depends(get_current_user)):
     return {"success": True, "message": "Current user.", "data": _profile(user)}
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(
+    session: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+) -> Response:
+    try:
+        session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Logout could not be completed.",
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/verify-email", response_model=APIResponse[VerificationResult])

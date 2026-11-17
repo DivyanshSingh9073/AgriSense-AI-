@@ -50,14 +50,32 @@ export function Dashboard() {
         .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
         .slice(0, 5),
     );
-    try {
-      const farmList = await farmService.list();
-      setFarms(farmList);
-    } catch {
-      setLoadError('Could not load your farms right now. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const [farmResult, reportResult] = await Promise.allSettled([
+      farmService.list(),
+      reportsService.list(),
+    ]);
+    const unavailableData: string[] = [];
+
+    if (farmResult.status === 'fulfilled') {
+      setFarms(farmResult.value);
+    } else {
+      unavailableData.push('farms');
     }
+
+    if (reportResult.status === 'fulfilled') {
+      setReports(
+        [...reportResult.value]
+          .sort((first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime())
+          .slice(0, 5),
+      );
+    } else {
+      unavailableData.push('reports');
+    }
+
+    if (unavailableData.length > 0) {
+      setLoadError(`Could not load your ${unavailableData.join(' and ')} right now. Please try again.`);
+    }
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -198,10 +216,10 @@ export function Dashboard() {
           </CardHeader>
           <CardBody>
             <p className="mb-3 text-xs text-foreground-muted">
-              Showing reports saved on this device. Server reports are not available yet.
+              Showing reports saved on the server and this device. Device-local reports are marked.
             </p>
             {reports.length === 0 ? (
-              <p className="py-4 text-sm text-foreground-muted">No reports saved on this device yet.</p>
+              <p className="py-4 text-sm text-foreground-muted">No reports saved yet.</p>
             ) : (
               <div className="divide-y divide-border">
                 {reports.map((report) => (
