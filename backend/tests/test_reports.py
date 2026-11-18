@@ -1,5 +1,5 @@
 import asyncio
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -213,6 +213,107 @@ def test_list_reports_returns_only_authenticated_users_history(reports_client) -
     assert first_report.status_code == second_report.status_code == 201
     assert [item["id"] for item in listed.json()["reports"]] == [first_report.json()["report"]["id"]]
     assert [item["id"] for item in other_user_listed.json()["reports"]] == [second_report.json()["report"]["id"]]
+
+
+def test_delete_report_removes_authenticated_users_report(reports_client) -> None:
+    created = api_request(
+        reports_client,
+        "POST",
+        "/api/v1/reports/generate",
+        json={"farm_id": None, "report_type": "soil_analysis"},
+    )
+    report_id = created.json()["report"]["id"]
+
+    deleted = api_request(reports_client, "DELETE", f"/api/v1/reports/{report_id}")
+
+    assert deleted.status_code == 204
+    assert deleted.content == b""
+    with Session(reports_client[1]) as session:
+        assert session.get(Report, UUID(report_id)) is None
+
+
+def test_user_cannot_delete_another_users_report(reports_client) -> None:
+    created = api_request(
+        reports_client,
+        "POST",
+        "/api/v1/reports/generate",
+        user_index=1,
+        json={"farm_id": None, "report_type": "weather_summary"},
+    )
+    report_id = created.json()["report"]["id"]
+
+    deleted = api_request(reports_client, "DELETE", f"/api/v1/reports/{report_id}")
+
+    assert deleted.status_code == 404
+    with Session(reports_client[1]) as session:
+        assert session.get(Report, UUID(report_id)) is not None
+
+
+def test_delete_report_returns_not_found_for_nonexistent_report(reports_client) -> None:
+    deleted = api_request(reports_client, "DELETE", f"/api/v1/reports/{uuid4()}")
+
+    assert deleted.status_code == 404
+
+
+def test_delete_report_requires_authentication(reports_client) -> None:
+    created = api_request(
+        reports_client,
+        "POST",
+        "/api/v1/reports/generate",
+        json={"farm_id": None, "report_type": "crop_health"},
+    )
+    report_id = created.json()["report"]["id"]
+
+    deleted = api_request(
+        reports_client,
+        "DELETE",
+        f"/api/v1/reports/{report_id}",
+        user_index=None,
+    )
+
+    assert deleted.status_code == 401
+    with Session(reports_client[1]) as session:
+        assert session.get(Report, UUID(report_id)) is not None
+
+
+def test_deleted_report_no_longer_appears_in_history(reports_client) -> None:
+    created = api_request(
+        reports_client,
+        "POST",
+        "/api/v1/reports/generate",
+        json={"farm_id": None, "report_type": "yield_forecast"},
+    )
+    report_id = created.json()["report"]["id"]
+
+    deleted = api_request(reports_client, "DELETE", f"/api/v1/reports/{report_id}")
+    listed = api_request(reports_client, "GET", "/api/v1/reports")
+
+    assert deleted.status_code == 204
+    assert listed.status_code == 200
+    assert all(item["id"] != report_id for item in listed.json()["reports"])
+
+
+def test_deleting_report_leaves_other_users_reports_untouched(reports_client) -> None:
+    own_report = api_request(
+        reports_client,
+        "POST",
+        "/api/v1/reports/generate",
+        json={"farm_id": None, "report_type": "crop_health"},
+    ).json()["report"]["id"]
+    other_report = api_request(
+        reports_client,
+        "POST",
+        "/api/v1/reports/generate",
+        user_index=1,
+        json={"farm_id": None, "report_type": "weather_summary"},
+    ).json()["report"]["id"]
+
+    deleted = api_request(reports_client, "DELETE", f"/api/v1/reports/{own_report}")
+
+    assert deleted.status_code == 204
+    with Session(reports_client[1]) as session:
+        assert session.get(Report, UUID(own_report)) is None
+        assert session.get(Report, UUID(other_report)) is not None
 
 
 @pytest.mark.parametrize("method,path,body", [

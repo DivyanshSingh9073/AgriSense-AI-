@@ -30,6 +30,30 @@ function readHistory(): ReportListItem[] {
   }
 }
 
+function removeLocalReport(reportId: string): void {
+  const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+  if (raw === null) return;
+
+  let entries: unknown;
+  try {
+    entries = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error('Saved report history on this device could not be read.');
+  }
+  if (!Array.isArray(entries)) {
+    throw new Error('Saved report history on this device is invalid.');
+  }
+
+  const remaining = entries.filter(
+    (entry) =>
+      typeof entry !== 'object' ||
+      entry === null ||
+      !('id' in entry) ||
+      entry.id !== reportId,
+  );
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(remaining));
+}
+
 export const reportsService = {
   listLocalHistory(): ReportListItem[] {
     return readHistory();
@@ -50,5 +74,13 @@ export const reportsService = {
       payload,
     );
     return formatReport(data.report);
+  },
+
+  async delete(report: Pick<ReportListItem, 'id' | 'isLocal'>): Promise<void> {
+    if (report.isLocal) {
+      removeLocalReport(report.id);
+      return;
+    }
+    await api.delete(API_ENDPOINTS.reports.detail(report.id));
   },
 };

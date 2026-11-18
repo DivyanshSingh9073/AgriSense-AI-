@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
   reports: {
     list: '/reports',
     generate: '/reports/generate',
+    detail: (reportId: string) => `/reports/${reportId}`,
   },
   farms: {
     list: '/farms',

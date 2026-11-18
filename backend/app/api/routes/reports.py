@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -61,3 +63,29 @@ def create_report(
             detail="Report could not be generated.",
         ) from None
     return GenerateReportResponse(report=_report_response(report, farm_name))
+
+
+@router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_report(
+    report_id: UUID,
+    session: Session = Depends(get_db_session),
+    user: User = Depends(get_current_user),
+) -> Response:
+    try:
+        report = session.scalar(
+            select(Report).where(Report.id == report_id, Report.user_id == user.id)
+        )
+        if report is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Report not found.",
+            )
+        session.delete(report)
+        session.commit()
+    except SQLAlchemyError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Report could not be deleted.",
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

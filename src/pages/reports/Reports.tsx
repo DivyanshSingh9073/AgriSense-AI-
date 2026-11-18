@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   MdOutlineDescription,
   MdOutlineDownload,
   MdOutlineAutoAwesome,
   MdOutlineAgriculture,
+  MdOutlineDeleteForever,
 } from 'react-icons/md';
 import {
   Alert,
@@ -75,6 +76,9 @@ export function Reports() {
   const [selectedType, setSelectedType] = useState<ReportType>('crop_health');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [deletionError, setDeletionError] = useState<string | null>(null);
+  const [deletingReportIds, setDeletingReportIds] = useState<Set<string>>(new Set());
+  const deletingReportIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
     (async () => {
@@ -117,6 +121,39 @@ export function Reports() {
     }
   };
 
+  const handleDelete = async (report: ReportListItem) => {
+    if (deletingReportIdsRef.current.has(report.id)) return;
+    const reportName = report.title ?? `${REPORT_TYPE_LABELS[report.reportType]} report`;
+    if (!window.confirm(`Delete "${reportName}"? This cannot be undone.`)) return;
+
+    deletingReportIdsRef.current.add(report.id);
+    setDeletingReportIds((current) => new Set(current).add(report.id));
+    setDeletionError(null);
+    try {
+      await reportsService.delete(report);
+      setHistory((current) =>
+        current.filter(
+          (entry) =>
+            entry.id !== report.id ||
+            Boolean(entry.isLocal) !== Boolean(report.isLocal),
+        ),
+      );
+    } catch (error) {
+      const message =
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String(error.message)
+          : 'Please try again.';
+      setDeletionError(`Could not delete this report. ${message}`);
+    } finally {
+      deletingReportIdsRef.current.delete(report.id);
+      setDeletingReportIds((current) => {
+        const remaining = new Set(current);
+        remaining.delete(report.id);
+        return remaining;
+      });
+    }
+  };
+
   return (
     <div className="container-app max-w-4xl py-8">
       <div>
@@ -133,6 +170,12 @@ export function Reports() {
       {generationError && (
         <Alert variant="error" className="mt-6" onClose={() => setGenerationError(null)}>
           {generationError}
+        </Alert>
+      )}
+
+      {deletionError && (
+        <Alert variant="error" className="mt-6" onClose={() => setDeletionError(null)}>
+          {deletionError}
         </Alert>
       )}
 
@@ -251,6 +294,16 @@ export function Reports() {
                       onClick={() => downloadReport(report)}
                     >
                       Export
+                    </Button>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      leftIcon={<MdOutlineDeleteForever />}
+                      isLoading={deletingReportIds.has(report.id)}
+                      loadingText="Deleting…"
+                      onClick={() => handleDelete(report)}
+                    >
+                      Delete
                     </Button>
                   </div>
                   <p className="mt-3 text-sm leading-relaxed text-foreground-muted">{report.summary}</p>
