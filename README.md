@@ -459,3 +459,13 @@ There is no repository-specific contribution guide or code-formatting command be
 ## License
 
 No license file is present in the repository. Add and review a license before redistributing this project or accepting contributions under an assumed open-source license.
+
+## Project Development
+
+AgriSense AI was primarily designed, developed,
+and maintained by me.
+
+An initial contribution from another developer
+appears in the Git history, but that code was
+subsequently removed and replaced. The current
+implementation reflects my development work.
